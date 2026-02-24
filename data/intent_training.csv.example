@@ -1,0 +1,11 @@
+text,intent
+hi,greeting
+hello,greeting
+what is niacinamide,ingredient_info
+tell me about retinol,ingredient_info
+products with hyaluronic acid,products_with_ingredient
+recommend for dry skin,product_recommendation
+I have acne,product_recommendation
+best moisturiser for oily skin,product_recommendation
+search ceramide,general_ingredient_search
+random question,other

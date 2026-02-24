@@ -9,6 +9,7 @@ from skin_knowledge import (
     search_ingredients,
     search_products_by_concern,
     search_skinme_by_concern,
+    search_skinme_db_by_concern,
     get_ingredient_by_name,
     get_products_containing_ingredient,
 )
@@ -98,8 +99,8 @@ def _format_product(prod: dict) -> str:
     return line
 
 
-def reply_with_retrieval(user_message: str) -> str:
-    """Answer using only the ingredients and products knowledge base (no API)."""
+def reply_with_retrieval(user_message: str, use_database: bool = False) -> str:
+    """Answer using ingredients and products. If use_database=True, query MySQL (skinme_db) for product recommendations."""
     ingredients_df = _get_ingredients()
     products_df = _get_products()
     msg = user_message.strip().lower()
@@ -145,21 +146,26 @@ def reply_with_retrieval(user_message: str) -> str:
                     return "\n\n".join(_format_ingredient(h) for h in hits)
             break
 
-    # 2) "Products for [concern]" / "Recommend for dry skin" / "I have acne" — use SkinMe DB first
+    # 2) "Products for [concern]" / "Recommend for dry skin" / "I have acne" — optional DB, then SkinMe CSV
     concern_type = _detect_concern_type(user_message)
     if concern_type or any(w in msg for w in ("product", "recommend", "suggest", "for my", "for dry", "for oily", "for sensitive", "for acne", "moisturiser", "moisturizer")):
         concern = user_message
         ing_hits = search_ingredients(concern, ingredients_df, 4)
-        skinme_df = _get_skinme()
-        prod_hits = search_skinme_by_concern(concern, skinme_df, product_type=concern_type, top_k=5) if not skinme_df.empty else []
-        from_skinme = bool(prod_hits)
+        prod_hits = []
+        from_db = False
+        if use_database:
+            prod_hits = search_skinme_db_by_concern(concern, product_type=concern_type, top_k=5)
+            from_db = bool(prod_hits)
         if not prod_hits:
-            prod_hits = search_products_by_concern(concern, products_df, product_type=concern_type, top_k=5)
+            skinme_df = _get_skinme()
+            prod_hits = search_skinme_by_concern(concern, skinme_df, product_type=concern_type, top_k=5) if not skinme_df.empty else []
+            if not prod_hits:
+                prod_hits = search_products_by_concern(concern, products_df, product_type=concern_type, top_k=5)
         parts = []
         if ing_hits:
             parts.append("**Ingredients that may help:**\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3]))
         if prod_hits:
-            label = "**Product suggestions (SkinMe):**" if from_skinme else "**Product suggestions:**"
+            label = "**Product suggestions (from database):**" if from_db else "**Product suggestions:**"
             parts.append(label + "\n" + "\n".join(_format_product(p) for p in prod_hits))
         if parts:
             return "\n\n".join(parts)
@@ -187,24 +193,30 @@ def reply_with_retrieval(user_message: str) -> str:
     )
 
 
-def reply_with_llm(user_message: str, conversation_history: list[dict]) -> str:
+def reply_with_llm(user_message: str, conversation_history: list[dict], use_database: bool = False) -> str:
     """Use OpenAI to generate a reply, augmented with retrieval. Set OPENAI_API_KEY to use."""
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        return reply_with_retrieval(user_message)
+        return reply_with_retrieval(user_message, use_database=use_database)
 
     try:
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
     except Exception:
-        return reply_with_retrieval(user_message)
+        return reply_with_retrieval(user_message, use_database=use_database)
 
     ingredients_df = _get_ingredients()
     products_df = _get_products()
-    # Retrieve relevant context
     ing_hits = search_ingredients(user_message, ingredients_df, 5)
     concern_type = _detect_concern_type(user_message)
-    prod_hits = search_products_by_concern(user_message, products_df, product_type=concern_type, top_k=5)
+    prod_hits = []
+    if use_database:
+        prod_hits = search_skinme_db_by_concern(user_message, product_type=concern_type, top_k=5)
+    if not prod_hits:
+        skinme_df = _get_skinme()
+        prod_hits = search_skinme_by_concern(user_message, skinme_df, product_type=concern_type, top_k=5) if not skinme_df.empty else []
+    if not prod_hits:
+        prod_hits = search_products_by_concern(user_message, products_df, product_type=concern_type, top_k=5)
     context_parts = []
     if ing_hits:
         context_parts.append("Relevant ingredients (name, what_is_it, what_does_it_do):\n" + "\n".join(
@@ -237,12 +249,17 @@ Be brief and helpful. When recommending products, mention 1–3 by name and pric
         )
         return resp.choices[0].message.content.strip()
     except Exception:
-        return reply_with_retrieval(user_message)
+        return reply_with_retrieval(user_message, use_database=use_database)
 
 
-def get_reply(user_message: str, conversation_history: list[dict] | None = None, use_llm: bool = True) -> str:
-    """Get the assistant reply. Uses LLM if OPENAI_API_KEY is set and use_llm=True, else retrieval-only."""
+def get_reply(
+    user_message: str,
+    conversation_history: list[dict] | None = None,
+    use_llm: bool = True,
+    use_database: bool = False,
+) -> str:
+    """Get the assistant reply. Set use_database=True to check products from MySQL (skinme_db)."""
     history = conversation_history or []
     if use_llm and os.environ.get("OPENAI_API_KEY"):
-        return reply_with_llm(user_message, history)
-    return reply_with_retrieval(user_message)
+        return reply_with_llm(user_message, history, use_database=use_database)
+    return reply_with_retrieval(user_message, use_database=use_database)

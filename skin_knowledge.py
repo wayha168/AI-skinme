@@ -89,6 +89,20 @@ def search_skinme_by_concern(
     return out
 
 
+def search_skinme_db_by_concern(
+    concern: str, product_type: str | None = None, top_k: int = 5
+) -> list[dict]:
+    """Query MySQL (skinme_db) for products by concern when env MYSQL_* is set. Returns list of product dicts."""
+    try:
+        from skin_assistant.infrastructure.skinme_db import SkinMeDBClient
+        client = SkinMeDBClient()
+        if client.is_available():
+            return client.search_products_by_concern(concern, product_type=product_type, top_k=top_k)
+    except Exception:
+        pass
+    return []
+
+
 def search_ingredients(query: str, ingredients_df: pd.DataFrame, top_k: int = 5):
     """Find ingredients matching query (keyword match in name and descriptions)."""
     if ingredients_df.empty or not query.strip():

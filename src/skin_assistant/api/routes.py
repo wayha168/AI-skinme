@@ -60,9 +60,14 @@ def _to_product_out(d: dict) -> ProductOut:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    """Send a message and get the assistant reply. Optional history for context."""
+    """Send a message and get the assistant reply. Set use_database=true to check products from MySQL (skinme_db)."""
     history = [{"role": m.role, "content": m.content} for m in req.history]
-    reply = _chat.get_reply(req.message, conversation_history=history, use_llm=req.use_llm)
+    reply = _chat.get_reply(
+        req.message,
+        conversation_history=history,
+        use_llm=req.use_llm,
+        use_database=req.use_database,
+    )
     return ChatResponse(reply=reply)
 
 
@@ -95,16 +100,22 @@ def search_products(
     product_type: Optional[str] = Query(None, max_length=100),
     ingredient: Optional[str] = Query(None, max_length=200),
     top_k: int = Query(5, ge=1, le=20),
+    use_database: bool = Query(
+        False,
+        description="If true, search products from MySQL (skinme_db) when configured.",
+    ),
 ) -> SearchProductsResponse:
     """
     Search products by concern (e.g. dry skin) or by ingredient name.
-    Use `concern` for recommendations, or `ingredient` for products containing an ingredient.
+    Set use_database=true to query MySQL skinme_db.
     """
     if ingredient:
         results = _repo.get_products_containing_ingredient(ingredient, top_k=top_k)
         q = ingredient
     elif concern:
-        results = _repo.search_products_by_concern(concern, product_type=product_type, top_k=top_k)
+        results = _repo.search_products_by_concern(
+            concern, product_type=product_type, top_k=top_k, use_database=use_database
+        )
         q = concern
     else:
         raise HTTPException(

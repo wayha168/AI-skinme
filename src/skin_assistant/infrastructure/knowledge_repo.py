@@ -1,4 +1,4 @@
-"""Data layer: load and search ingredients and products from CSV."""
+"""Data layer: load and search ingredients and products from CSV and optional MySQL (skinme_db)."""
 import re
 from pathlib import Path
 from typing import Optional
@@ -8,8 +8,18 @@ import pandas as pd
 from skin_assistant.config import get_settings
 
 
+def _get_db_client():
+    """Lazy singleton for optional MySQL client."""
+    try:
+        from skin_assistant.infrastructure.skinme_db import SkinMeDBClient
+        c = SkinMeDBClient()
+        return c if c.is_available() else None
+    except Exception:
+        return None
+
+
 class KnowledgeRepository:
-    """Repository for ingredients, skincare products, and SkinMe products."""
+    """Repository for ingredients, skincare products, SkinMe products, and optional MySQL skinme_db."""
 
     def __init__(self, data_dir: Optional[Path] = None):
         settings = get_settings()
@@ -17,6 +27,7 @@ class KnowledgeRepository:
         self._ingredients_df: Optional[pd.DataFrame] = None
         self._products_df: Optional[pd.DataFrame] = None
         self._skinme_df: Optional[pd.DataFrame] = None
+        self._db_client = None
 
     def _ensure_ingredients(self) -> pd.DataFrame:
         if self._ingredients_df is None:
@@ -118,10 +129,21 @@ class KnowledgeRepository:
             return df[name_match].iloc[0].to_dict()
         return None
 
+    def _get_db_client(self):
+        if self._db_client is None:
+            self._db_client = _get_db_client()
+        return self._db_client
+
     def search_products_by_concern(
-        self, concern: str, product_type: Optional[str] = None, top_k: int = 5
+        self, concern: str, product_type: Optional[str] = None, top_k: int = 5, use_database: bool = False
     ) -> list[dict]:
-        """Search products by concern. Prefers SkinMe DB, falls back to skincare_products_clean."""
+        """Search products by concern. If use_database=True and MySQL is configured, query skinme_db first."""
+        if use_database:
+            client = self._get_db_client()
+            if client:
+                db_hits = client.search_products_by_concern(concern, product_type=product_type, top_k=top_k)
+                if db_hits:
+                    return db_hits
         skinme_hits = self._search_skinme_by_concern(concern, product_type=product_type, top_k=top_k)
         if skinme_hits:
             return skinme_hits

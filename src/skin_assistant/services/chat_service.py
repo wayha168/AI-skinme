@@ -67,7 +67,7 @@ class ChatService:
     def __init__(self, repo: Optional[KnowledgeRepository] = None):
         self._repo = repo or KnowledgeRepository()
 
-    def reply_with_retrieval(self, user_message: str) -> str:
+    def reply_with_retrieval(self, user_message: str, use_database: bool = False) -> str:
         msg = user_message.strip().lower()
 
         # Products with [ingredient]
@@ -124,7 +124,9 @@ class ChatService:
             )
         ):
             ing_hits = self._repo.search_ingredients(user_message, 4)
-            prod_hits = self._repo.search_products_by_concern(user_message, product_type=concern_type, top_k=5)
+            prod_hits = self._repo.search_products_by_concern(
+                user_message, product_type=concern_type, top_k=5, use_database=use_database
+            )
             parts = []
             if ing_hits:
                 parts.append("**Ingredients that may help:**\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3]))
@@ -155,9 +157,11 @@ class ChatService:
             "• **Products with hyaluronic acid**"
         )
 
-    def reply_with_llm(self, user_message: str, conversation_history: list[dict]) -> str:
+    def reply_with_llm(
+        self, user_message: str, conversation_history: list[dict], use_database: bool = False
+    ) -> str:
         if not os.environ.get("OPENAI_API_KEY"):
-            return self.reply_with_retrieval(user_message)
+            return self.reply_with_retrieval(user_message, use_database=use_database)
         try:
             from openai import OpenAI
             client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -166,7 +170,9 @@ class ChatService:
 
         ing_hits = self._repo.search_ingredients(user_message, 5)
         concern_type = _detect_concern_type(user_message)
-        prod_hits = self._repo.search_products_by_concern(user_message, product_type=concern_type, top_k=5)
+        prod_hits = self._repo.search_products_by_concern(
+            user_message, product_type=concern_type, top_k=5, use_database=use_database
+        )
         context_parts = []
         if ing_hits:
             context_parts.append(
@@ -201,15 +207,16 @@ Be brief. When recommending products, mention 1–3 by name and price. Do not ma
             )
             return resp.choices[0].message.content.strip()
         except Exception:
-            return self.reply_with_retrieval(user_message)
+            return self.reply_with_retrieval(user_message, use_database=use_database)
 
     def get_reply(
         self,
         user_message: str,
         conversation_history: Optional[list[dict]] = None,
         use_llm: bool = True,
+        use_database: bool = False,
     ) -> str:
         history = conversation_history or []
         if use_llm and os.environ.get("OPENAI_API_KEY"):
-            return self.reply_with_llm(user_message, history)
-        return self.reply_with_retrieval(user_message)
+            return self.reply_with_llm(user_message, history, use_database=use_database)
+        return self.reply_with_retrieval(user_message, use_database=use_database)

@@ -78,12 +78,24 @@ From your Spring app you can:
 - **GET** ingredients/products for syncing to your DB or for search.
 - **POST** `/v1/chat` with `{"message": "...", "history": []}` to get a reply, then save the turn via your own service that calls your `POST /api/v1/chat/log` or the client can call Skin Assistant’s **POST /v1/chat/log** with the same payload so it gets forwarded to Spring (if `SPRING_BACKEND_URL` is set).
 
-## 4. Environment variable
+## 4. Environment variables
 
 ```bash
 # Optional: Skin Assistant will forward POST /v1/chat/log and POST /v1/feedback to your Spring app
 export SPRING_BACKEND_URL=http://localhost:8080
+
+# Optional: MySQL (skinme_db) for "check with database" in chat and product search
+export MYSQL_HOST=your-mysql-host
+export MYSQL_PORT=3306
+export MYSQL_USER=your_user
+export MYSQL_PASSWORD=your_password
+export MYSQL_DATABASE=skinme_db
+# export MYSQL_PRODUCTS_TABLE=product   # default table name
+
 python main.py
 ```
 
-Use `BACKEND_WEBHOOK_URL` instead if you prefer that name.
+Use `BACKEND_WEBHOOK_URL` instead of `SPRING_BACKEND_URL` if you prefer.  
+**Do not commit real credentials.** Use a `.env` file (add `.env` to `.gitignore`) or your deployment secrets.
+
+When MySQL is configured, use `"use_database": true` in **POST /v1/chat** or `?use_database=true` in **GET /v1/products** to query the live database for product recommendations.

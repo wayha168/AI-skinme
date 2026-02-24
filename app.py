@@ -52,8 +52,14 @@ st.caption("Ask about ingredients, skin concerns, or product recommendations. I 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Optional: LLM toggle in sidebar (if you add one) or use env only
-use_llm = True  # Set OPENAI_API_KEY to use GPT; otherwise retrieval-only
+# Sidebar: options
+with st.sidebar:
+    use_llm = st.checkbox("Use LLM (GPT) for replies", value=True, help="Requires OPENAI_API_KEY")
+    use_database = st.checkbox(
+        "Check with database (skinme_db)",
+        value=False,
+        help="Query MySQL for product recommendations when configured (MYSQL_* env)",
+    )
 
 # Show previous messages
 for msg in st.session_state.messages:
@@ -75,6 +81,7 @@ if prompt := st.chat_input("Ask about ingredients or skincare..."):
                     for m in st.session_state.messages[:-1]
                 ],
                 use_llm=use_llm,
+                use_database=use_database,
             )
         st.markdown(reply)
 

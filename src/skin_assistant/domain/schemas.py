@@ -12,6 +12,10 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     history: list[Message] = Field(default_factory=list, max_length=20)
     use_llm: bool = True
+    use_database: bool = Field(
+        False,
+        description="If true, product recommendations are fetched from MySQL (skinme_db) when configured.",
+    )
 
 
 class ChatResponse(BaseModel):

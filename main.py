@@ -1,10 +1,14 @@
 """
 Skin Assistant — entry point.
-  python main.py              # run API
-  python main.py sync         # fetch SkinMe API -> CSV, download images, cleanup
-  python main.py train        # train intent model
+  python main.py                    # run API
+  python main.py --sync-first       # sync product data from SkinMe API, then run API
+  python main.py sync               # fetch SkinMe API -> CSV, download images, cleanup
+  python main.py train              # train intent model
   python main.py train-products [--image]  # train product text (+ image) models
-  python main.py train-skin-condition      # train skin condition classifier from images (for recommendations)
+  python main.py train-skin-condition       # train skin condition classifier from images (for recommendations)
+
+  Product data: sync pulls from SkinMe API into data/skinme_products.csv. Optional MySQL (skinme_db)
+  is used at runtime when "Check with database" is enabled (set MYSQL_* in .env).
 """
 import argparse
 import sys
@@ -68,6 +72,11 @@ def main() -> int:
         choices=["serve", "sync", "train", "train-products", "train-skin-condition"],
         help="serve | sync | train | train-products | train-skin-condition",
     )
+    parser.add_argument(
+        "--sync-first",
+        action="store_true",
+        help="before serve: fetch product data from SkinMe API to CSV and download images, then start API",
+    )
     parser.add_argument("--no-download", action="store_true", help="sync: skip image download")
     parser.add_argument("--no-cleanup", action="store_true", help="sync: skip deleting unused images")
     parser.add_argument("--image", action="store_true", help="train-products: also train image model")
@@ -76,6 +85,11 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.command == "serve":
+        if args.sync_first:
+            print("Syncing product data from SkinMe API...")
+            if run_sync(no_download=args.no_download, no_cleanup=args.no_cleanup) != 0:
+                print("Sync had errors; starting API anyway.")
+            print("Starting API...")
         run_api(port=args.port, host=args.host)
         return 0
     if args.command == "sync":

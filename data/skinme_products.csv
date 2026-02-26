@@ -1,7 +1,70 @@
 id,name,brand,price,productType,inventory,description,howToUse,category_id,category_name,image_url,image_id,image_filename,all_image_urls
-1,Heimish All Clean Balm 120ml,Heimish,22.0,Clean Balm,11,"Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged",,1,Skin Care,https://backend.skinme.store/api/v1/images/image/download/1,1,photo_2025-10-30_14-32-49.jpg,https://backend.skinme.store/api/v1/images/image/download/1
-2,Pkar,Pich Pisey,12.0,Blush,12,"There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. ","There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. ",1,Skin Care,https://backend.skinme.store/api/v1/images/image/download/2,2,1748579773026-Phka%20Chouk.webp,https://backend.skinme.store/api/v1/images/image/download/2
-3,Pka Tkul,DMUNG,12.0,Make face younger ,4,Give you an extra smooth face,Apply it on your face,1,Skin Care,https://backend.skinme.store/api/v1/images/image/download/3,3,and this one too.avif,https://backend.skinme.store/api/v1/images/image/download/3
-4,Sahidi,DMUNG,30.0,Skin care,3,REd like a fire,apply it on your skin,1,Skin Care,https://backend.skinme.store/api/v1/images/image/download/4,4,pic 4.avif,https://backend.skinme.store/api/v1/images/image/download/4
-5,Anjella,DMUNG,29.0,Skin care,5,Offer you a pretty smooth skin,Apply it on your skin,1,Skin Care,https://backend.skinme.store/api/v1/images/image/download/5,5,pic 3.jpg,https://backend.skinme.store/api/v1/images/image/download/5
-6,Angella,DMUNG,29.0,Libstick,2,Red like a fire,Apply it on your lib ,1,Skin Care,https://backend.skinme.store/api/v1/images/image/download/6,6,pic 4.avif,https://backend.skinme.store/api/v1/images/image/download/6|https://backend.skinme.store/api/v1/images/image/download/7
+1,Torriden Dive-In Low Molecule Hyaluronic Acid Serum 50ml,"{'id': 1, 'name': 'Torriden', 'imageUrl': 'https://sokoskins.shop/cdn/shop/files/74b96dbb2d19db9758ba306fc55ad040_2c640130-9bd2-471f-a2fc-64cc86028920_1024x1024@2x.webp?v=1769322958', 'category': {'id': 2, 'name': 'Koean Products', 'title': None, 'description': 'Korean products, especially in beauty and skincare, are known worldwide for their high quality, innovation, and skin-friendly ingredients. South Korea has become a global leader in cosmetics and skincare due to its advanced research, creative formulas, and focus on healthy, glowing skin', 'image': '', 'link': ''}}",16.0,SERUM,15,"5D combination hyaluronic acid provides powerful inner moisturization care
+
+Refreshing water gel formula in sky blue color
+Powerful moisturization increases the moisture content of the skin
+Takes care of inner moisturization to soothe dry skin
+Reduces skin stress to increase the vitality of the skinFeatured ingredientsLow molecular hyaluronic acid and 5D-combination hyaluronic acid form a 3D network to quickly provide moisture and care for tight skin
+Contains D-panthenol to activate the moisturizing function of the skin sensitive to external stimulation and help soothe the skin
+Contains Malachite Extract and Ceremide to care for inner tightness","How to Use
+Use the pipette to apply a few drops to your face.
+Gently massage or pat into the skin for absorption.
+It can be layered if1extra hydration is needed",2,Koean Products,https://backend.skinme.store/uploads/74b96dbb2d19db9758ba306fc55ad040_2c640130-9bd2-471f-a2fc-64cc86028920_1024x1024@2x.webp,1,74b96dbb2d19db9758ba306fc55ad040_2c640130-9bd2-471f-a2fc-64cc86028920_1024x1024@2x.webp,https://backend.skinme.store/uploads/74b96dbb2d19db9758ba306fc55ad040_2c640130-9bd2-471f-a2fc-64cc86028920_1024x1024@2x.webp
+2,Madagascar Centella Ampoule (30ml/55ml/100ml),"{'id': 2, 'name': 'Skin1004', 'imageUrl': 'https://imgs.search.brave.com/ZTeulq9Nc1XEYTxG5o2ZwogatRYh9ipc-CwZlMQW3X4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/ay1za2luY2FyZS5u/bC9jZG4vc2hvcC9j/b2xsZWN0aW9ucy9T/S0lOMTAwNF9iYW5u/ZXIuanBnP3Y9MTc2/MTY4MDE0MyZ3aWR0/aD0zODQw', 'category': {'id': 2, 'name': 'Koean Products', 'title': None, 'description': 'Korean products, especially in beauty and skincare, are known worldwide for their high quality, innovation, and skin-friendly ingredients. South Korea has become a global leader in cosmetics and skincare due to its advanced research, creative formulas, and focus on healthy, glowing skin', 'image': '', 'link': ''}}",12.5,Ampoule,25,"All rounder ampoule with great qualities for redness and irritation relief, including high quality Madagascan Centella Asiatica extract.
+
+SKIN1004's signature ampoule offers hydrating, anti-inflammatory, barrier strengthening, soothing and antioxidant properties
+Madagascan Centella asiatica contains 7 times more soothing actives than other centella asiatica
+Immediately calms and hydrates sensitive skin","Calming, Hydrating, Acne Care
+
+TEXTURE
+Watery and slippery ampoule smoothly spreads and quickly penetrates the skin to keep it hydrated without stickiness.
+
+SKIN CONCERN
+Sensitivity
+
+SKIN TYPE
+Normal Skin, Sensitive skin
+
+HOW TO USE
+Drop an appropriate amount and evenly to the skin. Pat to promote absorption.",2,Koean Products,https://backend.skinme.store/uploads/SKIN1004_-_Madagascar_Centella_Ampoule.webp,2,SKIN1004_-_Madagascar_Centella_Ampoule.webp,https://backend.skinme.store/uploads/SKIN1004_-_Madagascar_Centella_Ampoule.webp|https://backend.skinme.store/uploads/SKIN1004_-_Madagascar_Centella_Ampoule.webp
+3,Madagascar Centella Cream (30ml/75ml),"{'id': 2, 'name': 'Skin1004', 'imageUrl': 'https://imgs.search.brave.com/ZTeulq9Nc1XEYTxG5o2ZwogatRYh9ipc-CwZlMQW3X4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/ay1za2luY2FyZS5u/bC9jZG4vc2hvcC9j/b2xsZWN0aW9ucy9T/S0lOMTAwNF9iYW5u/ZXIuanBnP3Y9MTc2/MTY4MDE0MyZ3aWR0/aD0zODQw', 'category': {'id': 2, 'name': 'Koean Products', 'title': None, 'description': 'Korean products, especially in beauty and skincare, are known worldwide for their high quality, innovation, and skin-friendly ingredients. South Korea has become a global leader in cosmetics and skincare due to its advanced research, creative formulas, and focus on healthy, glowing skin', 'image': '', 'link': ''}}",15.5,Cream ,20,"A light cream with Panthenol and TECA soothes, moisturises, and nourishes the skin.
+
+Lightweight and effective moisture sealing cream
+Calms the skin and forms a protective hydration layer with squalene and Centella asiatica extract
+Addition of TECA calms, moisturises, and nourishes skin
+Moisture envelops the oil particles to maintain the soft, moisturising feel of the OIL-IN-WATER-GEL technology: Oil & water emulsion delivers deeper and longer hydration
+Certified brightening & anti-aging benefits for clear and elastic skin","BENEFITS
+Calming, Hydrating
+
+TEXTURE
+Smooth and rich, yet light, cream texture with a natural aroma runs smoothly on the skin provides deep hydration.
+
+SKIN CONCERN
+Sensitivity
+
+SKIN TYPE
+Normal Skin, Sensitive skin
+
+HOW TO USE
+Apply appropriate amount on face and pat gently with both palms for absorption. Use it as last step of skincare routine.",2,Koean Products,https://backend.skinme.store/uploads/Madagascar Centella Cream.webp,6,Madagascar Centella Cream.webp,https://backend.skinme.store/uploads/Madagascar Centella Cream.webp
+4,Madagascar Centella Quick Calming Pads,"{'id': 2, 'name': 'Skin1004', 'imageUrl': 'https://imgs.search.brave.com/ZTeulq9Nc1XEYTxG5o2ZwogatRYh9ipc-CwZlMQW3X4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/ay1za2luY2FyZS5u/bC9jZG4vc2hvcC9j/b2xsZWN0aW9ucy9T/S0lOMTAwNF9iYW5u/ZXIuanBnP3Y9MTc2/MTY4MDE0MyZ3aWR0/aD0zODQw', 'category': {'id': 2, 'name': 'Koean Products', 'title': None, 'description': 'Korean products, especially in beauty and skincare, are known worldwide for their high quality, innovation, and skin-friendly ingredients. South Korea has become a global leader in cosmetics and skincare due to its advanced research, creative formulas, and focus on healthy, glowing skin', 'image': '', 'link': ''}}",16.7,Pads,5,"An essence-rich toner pad with Centella and Panthenol soothes and hydrates the skin in a simple 2-minute step.
+
+An essence-rich toner pad with Centella and Panthenol soothes and hydrates the skin
+Offers much more convenient use than facial sheet mask
+Gentle calming pad composed of only 10 EWG green-grade ingredients that are essential for soothing irritated skin
+Triple layered pads contains more essence and strongly adheres to the skin
+Large size pads makes it easy to tend large areas of the face at once, with less hassle- Crescent moon shaped pad tailored for easy application around the curvatures of the eyes and nose area","Place the pads for 3-5 minutes on cheeks, forehead or specific areas of concern. Remove them then pat ato absorb remaining essence.
+
+*After opening product, put the included lid and pinset in a container for convenient use.",2,Koean Products,https://backend.skinme.store/uploads/Madagascar Centella Quick Calming Pads.webp,7,Madagascar Centella Quick Calming Pads.webp,https://backend.skinme.store/uploads/Madagascar Centella Quick Calming Pads.webp
+5,Retinol 0.2 Boosting Shot Ampoule,"{'id': 2, 'name': 'Skin1004', 'imageUrl': 'https://imgs.search.brave.com/ZTeulq9Nc1XEYTxG5o2ZwogatRYh9ipc-CwZlMQW3X4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/ay1za2luY2FyZS5u/bC9jZG4vc2hvcC9j/b2xsZWN0aW9ucy9T/S0lOMTAwNF9iYW5u/ZXIuanBnP3Y9MTc2/MTY4MDE0MyZ3aWR0/aD0zODQw', 'category': {'id': 2, 'name': 'Koean Products', 'title': None, 'description': 'Korean products, especially in beauty and skincare, are known worldwide for their high quality, innovation, and skin-friendly ingredients. South Korea has become a global leader in cosmetics and skincare due to its advanced research, creative formulas, and focus on healthy, glowing skin', 'image': '', 'link': ''}}",21.5,Ampoule,20,"A blend of Retinol and Retinal that helps improve the appearance of skin firmness and texture, delivered through a Boosting Shot system for healthier-looking skin","0.2% Retinol, Retinal, Squalane, Madagascar Centella Asiatica Extract, Panthenol,Hydrolyzed Sponge (Spicules)
+
+",2,Koean Products,https://backend.skinme.store/uploads/retinol-0-2-boosting-shot-ampoule.webp,8,retinol-0-2-boosting-shot-ampoule.webp,https://backend.skinme.store/uploads/retinol-0-2-boosting-shot-ampoule.webp
+6,NUDE BARE – Peach Glow Cream Blush,"{'id': 3, 'name': 'Bare', 'imageUrl': 'https://backend.skinme.store/uploads/502739125_122112046172862017_5120576653890986647_n.jpg', 'category': {'id': 4, 'name': 'Bare', 'title': None, 'description': '', 'image': '/uploads/502739125_122112046172862017_5120576653890986647_n.jpg', 'link': 'https://web.facebook.com/bareofficialpage/'}}",12.5,BLUSH,25,"NUDE BARE Peach Glow Cream Blush delivers a fresh, natural flush inspired by the soft warmth of ripe peaches. Designed with a smooth, creamy texture, this blush melts effortlessly into the skin, giving you a radiant, healthy-looking glow.","Look at this beautiful peach tone — it’s inspired by fresh, juicy peaches and gives such a natural warmth to the skin.",4,Bare,https://backend.skinme.store/uploads/3d786a20-fd7d-43c5-89fe-cd996d6c8271.png,10,3d786a20-fd7d-43c5-89fe-cd996d6c8271.png,https://backend.skinme.store/uploads/3d786a20-fd7d-43c5-89fe-cd996d6c8271.png
+7,Centella Soothing Cream,"{'id': 2, 'name': 'Skin1004', 'imageUrl': 'https://imgs.search.brave.com/ZTeulq9Nc1XEYTxG5o2ZwogatRYh9ipc-CwZlMQW3X4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/ay1za2luY2FyZS5u/bC9jZG4vc2hvcC9j/b2xsZWN0aW9ucy9T/S0lOMTAwNF9iYW5u/ZXIuanBnP3Y9MTc2/MTY4MDE0MyZ3aWR0/aD0zODQw', 'category': {'id': 2, 'name': 'Koean Products', 'title': None, 'description': 'Korean products, especially in beauty and skincare, are known worldwide for their high quality, innovation, and skin-friendly ingredients. South Korea has become a global leader in cosmetics and skincare due to its advanced research, creative formulas, and focus on healthy, glowing skin', 'image': '', 'link': ''}}",7.5,Gel Cream,12,"Centella Soothing Cream
+
+- Provides a cooling sensation that helps soothe visible redness
+- Powerful soothing care that quickly calms sensitive skin and strengthens the skin barrier
+- Contains 3 essential components to firm the skin: Ceramide, Cholesterol, and Fatty acids
+- Helps maintain the skin’s natural balance with a pH similar to that of healthy-looking skin
+- Formulated with Centella asiatica from Madagascar
+- Non-sticky, and lightweight moisturizing gel texture that glides smoothly onto the skin",Apply appropriate amount on face and pat gently with both palms for absorption. Use it as last step of skincare routine,2,Koean Products,https://backend.skinme.store/uploads/skin1004-cream-centella-soothing-cream-38642833588470_1440x.webp,11,skin1004-cream-centella-soothing-cream-38642833588470_1440x.webp,https://backend.skinme.store/uploads/skin1004-cream-centella-soothing-cream-38642833588470_1440x.webp

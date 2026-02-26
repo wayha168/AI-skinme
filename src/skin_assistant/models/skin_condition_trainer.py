@@ -160,3 +160,62 @@ def train_skin_condition_classifier(
         "classes": list(id_to_label.values()),
         "model_path": str(out_path),
     }
+
+
+def predict_skin_condition_from_image(image_input, model_path: Optional[Path] = None, image_size: int = 224):
+    """
+    Predict skin condition from a PIL Image or path to an image file.
+    Returns (condition_label, confidence) or (None, 0) if model missing or inference fails.
+    """
+    try:
+        import torch
+        from torchvision import transforms, models
+        from PIL import Image
+    except ImportError:
+        return None, 0.0
+
+    settings = get_settings()
+    path = model_path or settings.models_dir / "skin_condition_model.pt"
+    path = Path(path)
+    if not path.exists():
+        return None, 0.0
+
+    try:
+        checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+    except Exception:
+        return None, 0.0
+
+    id_to_label = checkpoint.get("id_to_label", {})
+    num_classes = checkpoint.get("num_classes", len(id_to_label))
+    if not id_to_label and num_classes:
+        id_to_label = {i: f"class_{i}" for i in range(num_classes)}
+
+    if isinstance(image_input, (str, Path)):
+        img = Image.open(image_input).convert("RGB")
+    else:
+        img = image_input.convert("RGB") if hasattr(image_input, "convert") else Image.fromarray(image_input).convert("RGB")
+
+    transform = transforms.Compose([
+        transforms.Resize((image_size, image_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    ])
+    x = transform(img).unsqueeze(0)
+
+    try:
+        try:
+            model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        except AttributeError:
+            model = models.resnet18(pretrained=True)
+        model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+        model.load_state_dict(checkpoint["model_state"], strict=True)
+    except Exception:
+        return None, 0.0
+
+    model.eval()
+    with torch.no_grad():
+        out = model(x)
+        probs = torch.softmax(out, dim=1)
+        conf, idx = probs[0].max(0).item(), probs[0].argmax(0).item()
+    label = id_to_label.get(int(idx), id_to_label.get(idx, "unknown"))
+    return label, float(conf)

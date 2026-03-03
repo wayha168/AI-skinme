@@ -6,7 +6,6 @@ Supports text chat and optional selfie upload for skin condition analysis.
 import sys
 from pathlib import Path
 
-# Prefer new package under src/
 _root = Path(__file__).resolve().parent
 _src = _root / "src"
 if _src.exists() and str(_src) not in sys.path:

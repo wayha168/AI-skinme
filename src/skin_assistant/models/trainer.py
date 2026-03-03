@@ -2,6 +2,7 @@
 Training pipeline for intent classification model (scikit-learn).
 Saves vectorizer + classifier to models/artifacts for use by the API.
 """
+from collections import Counter
 from pathlib import Path
 from typing import Optional
 
@@ -81,8 +82,15 @@ def train(
     if not texts:
         raise ValueError("No training data. Provide a CSV with 'text' and 'intent' or use defaults.")
 
+    # Stratify only when every class has at least 2 samples (required by train_test_split)
+    counts = Counter(y)
+    use_stratify = all(c >= 2 for c in counts.values())
     X_train, X_test, y_train, y_test = train_test_split(
-        texts, y, test_size=test_size, random_state=random_state, stratify=y
+        texts,
+        y,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=y if use_stratify else None,
     )
 
     pipeline = build_pipeline()

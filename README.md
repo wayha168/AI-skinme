@@ -39,7 +39,8 @@ python main.py
 API base: `http://localhost:8000`
 
 - **OpenAPI docs:** http://localhost:8000/docs  
-- **POST /v1/chat** — Chat with the assistant (body: `{"message": "...", "history": [], "use_llm": true}`)  
+- **POST /v1/chat** — Chat with the assistant (body: `{"message": "...", "history": [], "use_llm": true, "session_id": "optional-for-DB"}`). If `session_id` is set and MySQL is configured, the turn is saved to `chat_messages`.  
+- **POST /v1/chat/with-image** — Send a skin photo + optional message (multipart: `message`, `image`, `session_id?`). We analyze the image and reply with recommendations; turn is saved to DB when `session_id` is set.  
 - **GET /v1/ingredients/search?q=niacinamide** — Search ingredients  
 - **GET /v1/ingredients/{name}** — Get ingredient by name  
 - **GET /v1/products?concern=dry** or **?ingredient=hyaluronic+acid** — Product search  

@@ -2,12 +2,13 @@
 from typing import Optional
 
 import requests
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from skin_assistant.config import get_settings
 from skin_assistant.domain.schemas import (
     ChatRequest,
     ChatResponse,
+    ChatWithImageResponse,
     ChatLogRequest,
     FeedbackRequest,
     SaveResponse,
@@ -16,12 +17,13 @@ from skin_assistant.domain.schemas import (
     SearchIngredientsResponse,
     SearchProductsResponse,
 )
-from skin_assistant.infrastructure import KnowledgeRepository
+from skin_assistant.infrastructure import KnowledgeRepository, ChatRepository
 from skin_assistant.services import ChatService
 
 router = APIRouter(prefix="/v1", tags=["skin-assistant"])
 _repo = KnowledgeRepository()
 _chat = ChatService(repo=_repo)
+_chat_repo = ChatRepository()
 
 
 def _forward_to_backend(path: str, payload: dict) -> bool:
@@ -60,7 +62,8 @@ def _to_product_out(d: dict) -> ProductOut:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    """Send a message and get the assistant reply. Set use_database=true to check products from MySQL (skinme_db)."""
+    """Send a message and get the assistant reply. Set use_database=true to check products from MySQL (skinme_db).
+    If session_id is provided and MySQL is configured, the turn is saved to chat_messages."""
     history = [{"role": m.role, "content": m.content} for m in req.history]
     reply = _chat.get_reply(
         req.message,
@@ -68,7 +71,57 @@ def chat(req: ChatRequest) -> ChatResponse:
         use_llm=req.use_llm,
         use_database=req.use_database,
     )
+    if req.session_id and _chat_repo.is_available():
+        _chat_repo.save_message(req.session_id, "user", req.message)
+        _chat_repo.save_message(req.session_id, "assistant", reply)
     return ChatResponse(reply=reply)
+
+
+@router.post("/chat/with-image", response_model=ChatWithImageResponse)
+async def chat_with_image(
+    message: str = Form("", max_length=2000),
+    session_id: Optional[str] = Form(None, max_length=128),
+    use_llm: bool = Form(True),
+    use_database: bool = Form(False),
+    image: UploadFile = File(...),
+) -> ChatWithImageResponse:
+    """Send a message with a skin image; we analyze the image and reply with recommendations.
+    Message can be empty (we'll ask what to recommend). Turn is saved to DB if session_id is set and MySQL configured."""
+    image_analysis = None
+    effective_message = (message or "").strip() or "What do you recommend for my skin?"
+    try:
+        from skin_assistant.models.skin_condition_trainer import predict_skin_condition_from_image
+    except ImportError:
+        predict_skin_condition_from_image = None
+    if predict_skin_condition_from_image:
+        try:
+            contents = await image.read()
+            from PIL import Image
+            import io
+            img = Image.open(io.BytesIO(contents)).convert("RGB")
+            condition, conf = predict_skin_condition_from_image(img)
+            if condition:
+                image_analysis = f"{condition} ({conf:.0%})"
+                effective_message = f"From my skin photo the condition appears to be {condition}. {effective_message}"
+        except Exception:
+            pass
+        finally:
+            await image.close()
+    reply = _chat.get_reply(
+        effective_message,
+        conversation_history=[],
+        use_llm=use_llm,
+        use_database=use_database,
+    )
+    if session_id and _chat_repo.is_available():
+        user_content = (message or "Analyze my skin").strip() or "What do you recommend?"
+        _chat_repo.save_message(
+            session_id, "user",
+            user_content + (f" [Image analyzed: {image_analysis}]" if image_analysis else ""),
+            image_analysis=image_analysis,
+        )
+        _chat_repo.save_message(session_id, "assistant", reply)
+    return ChatWithImageResponse(reply=reply, image_analysis=image_analysis)
 
 
 @router.get("/ingredients/search", response_model=SearchIngredientsResponse)
@@ -175,6 +228,7 @@ def list_routes() -> dict:
         "base": base,
         "chat": {
             "post_chat": f"POST {base}/chat",
+            "post_chat_with_image": f"POST {base}/chat/with-image (multipart: message, session_id?, image)",
             "post_chat_log": f"POST {base}/chat/log",
         },
         "feedback": {"post_feedback": f"POST {base}/feedback"},

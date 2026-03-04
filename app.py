@@ -1,9 +1,11 @@
 """
 Skin Assistant Chat — Streamlit UI for the AI skincare bot.
 Run: streamlit run app.py  (from project root; ensure src is on PYTHONPATH or pip install -e .)
-Supports text chat and optional selfie upload for skin condition analysis.
+Supports text chat, selfie upload for skin analysis, and sending images in chat to analyze.
+Chat is recorded to MySQL (skinme_db) when MYSQL_* env is set.
 """
 import sys
+import uuid
 from pathlib import Path
 
 _root = Path(__file__).resolve().parent
@@ -15,7 +17,9 @@ import streamlit as st
 
 try:
     from skin_assistant.services import ChatService
+    from skin_assistant.infrastructure import ChatRepository
     _chat = ChatService()
+    _chat_repo = ChatRepository()
     def get_reply(msg, conversation_history=None, use_llm=True, use_database=False):
         return _chat.get_reply(
             msg,
@@ -32,6 +36,7 @@ try:
 except ImportError:
     _has_skin_predictor = False
     predict_skin_condition_from_image = None
+    _chat_repo = None
     try:
         from skin_chatbot import get_reply
     except ImportError:
@@ -72,6 +77,10 @@ if "uploaded_image" not in st.session_state:
     st.session_state.uploaded_image = None
 if "detected_condition" not in st.session_state:
     st.session_state.detected_condition = None  # (label, confidence) or None
+if "chat_session_id" not in st.session_state:
+    st.session_state.chat_session_id = str(uuid.uuid4())
+if "attach_image" not in st.session_state:
+    st.session_state.attach_image = None  # image file for next message
 
 # Sidebar: options
 with st.sidebar:
@@ -81,6 +90,8 @@ with st.sidebar:
         value=False,
         help="Query MySQL for product recommendations when configured (MYSQL_* env)",
     )
+    if _chat_repo and _chat_repo.is_available():
+        st.caption("Chat is saved to database (skinme_db)")
 
 # Image upload for skin analysis (optional)
 st.subheader("📷 Skin selfie (optional)")
@@ -110,27 +121,56 @@ else:
     st.session_state.uploaded_image = None
     st.session_state.detected_condition = None
 
+# Attach image to next chat message (analyzed when you send)
+attach = st.file_uploader(
+    "Attach skin photo to your next message (optional — we'll analyze it when you send)",
+    type=["jpg", "jpeg", "png", "webp"],
+    key="chat_attach",
+)
+st.session_state.attach_image = attach
+if attach:
+    st.caption("Photo attached. Send a message (or just 'analyze') to get a skin analysis and recommendations.")
+
 # Show previous messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar="✨" if msg["role"] == "assistant" else None):
+        if msg.get("image_analysis"):
+            st.caption(f"Skin analysis: {msg['image_analysis']}")
         st.markdown(msg["content"])
 
 # Chat input
-if prompt := st.chat_input("Ask about ingredients or skincare..."):
-    # Build message: if we have a detected condition, prepend it for better recommendations
-    effective_prompt = prompt
-    if st.session_state.detected_condition:
+if prompt := st.chat_input("Ask about ingredients or skincare (or send with a photo to analyze)..."):
+    # Use attached image for this message (analyze when sending)
+    attached = st.session_state.attach_image
+    image_analysis = None
+    effective_prompt = (prompt or "").strip() or "What do you recommend for my skin?"
+
+    if attached and _has_skin_predictor and predict_skin_condition_from_image:
+        with st.spinner("Analyzing skin photo..."):
+            condition, conf = predict_skin_condition_from_image(attached)
+        if condition:
+            image_analysis = f"{condition} ({conf:.0%})"
+            effective_prompt = f"From my skin photo the condition appears to be {condition}. {effective_prompt}"
+        st.session_state.attach_image = None
+        if "chat_attach" in st.session_state:
+            del st.session_state["chat_attach"]  # clear uploader so same image isn't reused
+    elif st.session_state.detected_condition:
         condition_label, _ = st.session_state.detected_condition
-        effective_prompt = f"My skin condition is {condition_label}. {prompt}"
-    st.session_state.messages.append({"role": "user", "content": effective_prompt})
+        effective_prompt = f"My skin condition is {condition_label}. {effective_prompt}"
+
+    user_content_display = (prompt or "Analyze my skin").strip() or "What do you recommend?"
+    st.session_state.messages.append({
+        "role": "user",
+        "content": user_content_display,
+        "image_analysis": image_analysis,
+    })
 
     with st.chat_message("user"):
-        if st.session_state.uploaded_image is not None:
-            st.image(st.session_state.uploaded_image, use_container_width=True)
-        st.markdown(prompt)
-        if st.session_state.detected_condition:
-            cond, conf = st.session_state.detected_condition
-            st.caption(f"Using detected condition: {cond} ({conf:.0%})")
+        if attached:
+            st.image(attached, use_container_width=True)
+        if image_analysis:
+            st.caption(f"Skin analysis: {image_analysis}")
+        st.markdown(user_content_display)
 
     with st.chat_message("assistant", avatar="✨"):
         with st.spinner("Thinking..."):
@@ -146,3 +186,10 @@ if prompt := st.chat_input("Ask about ingredients or skincare..."):
         st.markdown(reply)
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
+
+    # Record to DB (user input + assistant reply)
+    sid = st.session_state.chat_session_id
+    if _chat_repo and _chat_repo.is_available():
+        user_content_db = user_content_display + (f" [Image analyzed: {image_analysis}]" if image_analysis else "")
+        _chat_repo.save_message(sid, "user", user_content_db, image_analysis=image_analysis)
+        _chat_repo.save_message(sid, "assistant", reply)

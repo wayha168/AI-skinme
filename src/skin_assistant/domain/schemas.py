@@ -16,10 +16,17 @@ class ChatRequest(BaseModel):
         False,
         description="If true, product recommendations are fetched from MySQL (skinme_db) when configured.",
     )
+    session_id: Optional[str] = Field(None, max_length=128, description="If set, this turn is saved to DB (skinme_db).")
 
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+class ChatWithImageResponse(BaseModel):
+    """Response when sending a message with an image for skin analysis."""
+    reply: str
+    image_analysis: Optional[str] = None  # e.g. "acne (85%)"
 
 
 # --- Backend integration (e.g. Spring): save to database ---

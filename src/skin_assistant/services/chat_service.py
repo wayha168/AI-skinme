@@ -28,6 +28,127 @@ def _detect_concern_type(text: str) -> Optional[str]:
     return None
 
 
+# Follow-up questions when user mentions a skin problem vaguely (like a real person would ask)
+CONCERN_FOLLOWUPS = {
+    "acne": (
+        "I'd like to recommend the right things for you. Can you tell me a bit more?\n\n"
+        "• **What type of acne** do you have — blackheads, whiteheads, cystic, or hormonal breakouts?\n"
+        "• **How severe** is it — mild, moderate, or more persistent?\n"
+        "• **What's your skin type** — oily, combination, or sensitive?\n\n"
+        "Once I know this, I can suggest ingredients and products that fit your situation."
+    ),
+    "dry": (
+        "To help you better, it would help to know:\n\n"
+        "• Is your skin **mostly dry** (tight or flaky), or also **sensitive or reactive**?\n"
+        "• **Which areas** are most affected — face, body, or both?\n"
+        "• Do you have any **other concerns** (e.g. redness, dullness)?\n\n"
+        "Then I can suggest ingredients and products that suit you."
+    ),
+    "oil": (
+        "Quick questions so I can tailor my suggestions:\n\n"
+        "• Is the oiliness **all over** or mainly in the **T-zone** (forehead, nose)?\n"
+        "• Do you also have **breakouts** or **enlarged pores**?\n"
+        "• Is your skin **sensitive** or quite tolerant to products?\n\n"
+        "With that, I can recommend the right products for you."
+    ),
+    "sensitive": (
+        "I'd like to suggest things that won't irritate you. Can you share:\n\n"
+        "• **What tends to trigger** your skin — certain products, weather, or stress?\n"
+        "• Do you get **redness**, **itching**, or both?\n"
+        "• Any **other concerns** (dryness, breakouts) alongside sensitivity?\n\n"
+        "Then I can point you to gentle ingredients and products."
+    ),
+    "redness": (
+        "To give you useful advice:\n\n"
+        "• Is the redness **ongoing** or does it **flare up** sometimes?\n"
+        "• Do you have **sensitive** or **reactive** skin, or rosacea?\n"
+        "• **Which areas** are affected — cheeks, nose, or all over?\n\n"
+        "I can then suggest calming ingredients and products."
+    ),
+    "aging": (
+        "To recommend the right products:\n\n"
+        "• What bothers you most — **fine lines**, **deeper wrinkles**, **dullness**, or **loss of firmness**?\n"
+        "• Do you have **sensitive** skin or use **retinoids** already?\n"
+        "• Any **other concerns** (dryness, pigmentation)?\n\n"
+        "Then I can suggest ingredients and products that fit your goals."
+    ),
+    "wrinkle": (
+        "To recommend the right products:\n\n"
+        "• What bothers you most — **fine lines**, **deeper wrinkles**, **dullness**, or **loss of firmness**?\n"
+        "• Do you have **sensitive** skin or use **retinoids** already?\n"
+        "• Any **other concerns** (dryness, pigmentation)?\n\n"
+        "Then I can suggest ingredients and products that fit your goals."
+    ),
+}
+
+
+def _get_concern_followup(user_message: str) -> Optional[str]:
+    """
+    If the user mentions a skin problem vaguely (e.g. 'I have acne' without asking for products),
+    return a friendly follow-up question to understand their problem type. Otherwise return None.
+    """
+    msg = user_message.strip().lower()
+    if any(
+        w in msg
+        for w in (
+            "recommend",
+            "suggest",
+            "product",
+            "products",
+            "what can i use",
+            "what should i use",
+            "give me",
+            "find me",
+            "best for",
+            "good for",
+            "help with",
+            "to treat",
+            "to fix",
+        )
+    ):
+        return None
+    concern_words = ["acne", "dry", "oil", "oily", "sensitive", "redness", "aging", "wrinkle", "pigment", "hydrat"]
+    has_concern = any(c in msg for c in concern_words)
+    is_short = len(msg) < 100
+    is_statement = any(
+        msg.startswith(p)
+        for p in (
+            "i have",
+            "i got",
+            "my skin",
+            "i suffer",
+            "suffering",
+            "dealing with",
+            "struggling",
+            "help",
+            "problem",
+            "issues with",
+            "concern",
+        )
+    ) or not msg.endswith("?")
+    if has_concern and is_short and is_statement:
+        if "acne" in msg:
+            return CONCERN_FOLLOWUPS["acne"]
+        if "dry" in msg or "hydrat" in msg:
+            return CONCERN_FOLLOWUPS["dry"]
+        if "oil" in msg:
+            return CONCERN_FOLLOWUPS["oil"]
+        if "sensitive" in msg:
+            return CONCERN_FOLLOWUPS["sensitive"]
+        if "redness" in msg:
+            return CONCERN_FOLLOWUPS["redness"]
+        if "aging" in msg or "wrinkle" in msg:
+            return CONCERN_FOLLOWUPS.get("aging") or CONCERN_FOLLOWUPS.get("wrinkle", CONCERN_FOLLOWUPS["acne"])
+        return (
+            "I'd like to help. Can you tell me a bit more?\n\n"
+            "• **What exactly** is bothering you — breakouts, dryness, redness, or something else?\n"
+            "• **Where** — face, body, or both?\n"
+            "• **What's your skin type** if you know it — oily, dry, combination, or sensitive?\n\n"
+            "Then I can suggest ingredients and products that fit."
+        )
+    return None
+
+
 def _format_ingredient(ing: dict) -> str:
     name = ing.get("name", "Unknown")
     what = ing.get("what_is_it", "")
@@ -105,6 +226,11 @@ class ChatService:
                     if hits:
                         return "\n\n".join(_format_ingredient(h) for h in hits)
                 break
+
+        # Vague skin problem — ask what type of problem (like a real person would)
+        followup = _get_concern_followup(user_message)
+        if followup:
+            return followup
 
         # Products for concern
         concern_type = _detect_concern_type(user_message)
@@ -192,6 +318,8 @@ class ChatService:
         context = "\n\n".join(context_parts) if context_parts else "No specific ingredients or products found."
 
         system = """You are a friendly Skin Care Assistant. Use the provided context to give accurate, concise answers.
+
+When the user mentions a skin problem (acne, dry skin, oily, sensitive, redness) but does NOT give enough detail, ask follow-up questions like a real person: e.g. for acne ask type (blackheads/cystic/hormonal), severity, and skin type; for dry ask areas and if sensitive; for oily ask T-zone vs all over and breakouts. Only suggest specific products/ingredients after they share more detail or explicitly ask for recommendations.
 Be brief. When recommending products, mention 1–3 by name and price. Do not make up product names or ingredients not in the context."""
         messages = [{"role": "system", "content": system}]
         messages.append({"role": "user", "content": f"Context:\n{context}\n\nUser: {user_message}"})
@@ -216,6 +344,10 @@ Be brief. When recommending products, mention 1–3 by name and price. Do not ma
         use_llm: bool = True,
         use_database: bool = False,
     ) -> str:
+        # When user mentions a skin problem vaguely, ask what type (like a real person) first
+        followup = _get_concern_followup(user_message)
+        if followup:
+            return followup
         history = conversation_history or []
         if use_llm and os.environ.get("OPENAI_API_KEY"):
             return self.reply_with_llm(user_message, history, use_database=use_database)

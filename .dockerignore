@@ -1,0 +1,12 @@
+venv
+.env
+.git
+__pycache__
+*.pyc
+.cursor
+*.md
+docs/
+terminals/
+agent-transcripts/
+.gitignore
+.dockerignore

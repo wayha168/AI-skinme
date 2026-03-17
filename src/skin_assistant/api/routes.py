@@ -63,7 +63,7 @@ def _to_product_out(d: dict) -> ProductOut:
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
     """Send a message and get the assistant reply. Set use_database=true to check products from MySQL (skinme_db).
-    If session_id is provided and MySQL is configured, conversation history is loaded from DB and the turn is saved to chat_messages."""
+    If session_id is set and MySQL is configured, the turn is saved to chat_ai. When user is logged in, send user_id (and optionally user_email, user_name) to store in DB."""
     if req.session_id and _chat_repo.is_available():
         db_history = _chat_repo.get_history(req.session_id, limit=20)
         history = [{"role": r["role"], "content": r["content"] or ""} for r in db_history]
@@ -76,8 +76,14 @@ def chat(req: ChatRequest) -> ChatResponse:
         use_database=req.use_database,
     )
     if req.session_id and _chat_repo.is_available():
-        _chat_repo.save_message(req.session_id, "user", req.message)
-        _chat_repo.save_message(req.session_id, "assistant", reply)
+        _chat_repo.save_message(
+            req.session_id, "user", req.message,
+            user_id=req.user_id, user_email=req.user_email, user_name=req.user_name,
+        )
+        _chat_repo.save_message(
+            req.session_id, "assistant", reply,
+            user_id=req.user_id, user_email=req.user_email, user_name=req.user_name,
+        )
     return ChatResponse(reply=reply)
 
 
@@ -85,6 +91,9 @@ def chat(req: ChatRequest) -> ChatResponse:
 async def chat_with_image(
     message: str = Form("", max_length=2000),
     session_id: Optional[str] = Form(None, max_length=128),
+    user_id: Optional[str] = Form(None, max_length=36),
+    user_email: Optional[str] = Form(None, max_length=255),
+    user_name: Optional[str] = Form(None, max_length=255),
     use_llm: bool = Form(True),
     use_database: bool = Form(False),
     image: UploadFile = File(...),
@@ -128,8 +137,12 @@ async def chat_with_image(
             session_id, "user",
             user_content + (f" [Image analyzed: {image_analysis}]" if image_analysis else ""),
             image_analysis=image_analysis,
+            user_id=user_id, user_email=user_email, user_name=user_name,
         )
-        _chat_repo.save_message(session_id, "assistant", reply)
+        _chat_repo.save_message(
+            session_id, "assistant", reply,
+            user_id=user_id, user_email=user_email, user_name=user_name,
+        )
     return ChatWithImageResponse(reply=reply, image_analysis=image_analysis)
 
 
@@ -236,8 +249,8 @@ def list_routes() -> dict:
     return {
         "base": base,
         "chat": {
-            "post_chat": f"POST {base}/chat",
-            "post_chat_with_image": f"POST {base}/chat/with-image (multipart: message, session_id?, image)",
+            "post_chat": f"POST {base}/chat (body: message, session_id?, user_id?, user_email?, user_name? for logged-in user)",
+            "post_chat_with_image": f"POST {base}/chat/with-image (multipart: message, session_id?, user_id?, user_email?, user_name?, image)",
             "post_chat_log": f"POST {base}/chat/log",
         },
         "feedback": {"post_feedback": f"POST {base}/feedback"},

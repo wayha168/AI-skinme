@@ -17,6 +17,9 @@ class ChatRequest(BaseModel):
         description="If true, product recommendations are fetched from MySQL (skinme_db) when configured.",
     )
     session_id: Optional[str] = Field(None, max_length=128, description="If set, this turn is saved to DB (skinme_db).")
+    user_id: Optional[str] = Field(None, max_length=36, description="Logged-in user ID from FE (e.g. from auth). Stored in DB with chat.")
+    user_email: Optional[str] = Field(None, max_length=255, description="Logged-in user email from FE. Stored in DB.")
+    user_name: Optional[str] = Field(None, max_length=255, description="Logged-in user name from FE. Stored in DB.")
 
 
 class ChatResponse(BaseModel):

@@ -26,6 +26,15 @@ if str(_src) not in sys.path:
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
 
+# Load .env so MYSQL_* and other vars are available for chat DB and API
+try:
+    from dotenv import load_dotenv
+    _env_file = _root / ".env"
+    if _env_file.exists():
+        load_dotenv(_env_file)
+except ImportError:
+    pass
+
 try:
     from console_style import (
         print_header,
@@ -154,7 +163,11 @@ def run_chat_console(
     if use_database and chat_repo.is_available():
         print_info("Using database for product recommendations.")
     if chat_repo.is_available():
-        print_info("Chat is saved to database (skinme_db).")
+        print_success("Chat is saved to database (skinme_db).")
+    else:
+        print_warning(
+            "Chat is NOT saved to database. To save chats: set MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE in .env"
+        )
     print_info("Use LLM (GPT): " + ("yes" if use_llm else "no (retrieval only)"))
     print_line()
 

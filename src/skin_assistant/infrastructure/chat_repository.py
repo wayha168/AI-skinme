@@ -1,7 +1,8 @@
 """
 Persist chat messages to MySQL (skinme_db). Uses same MYSQL_* env as SkinMeDBClient.
-Creates chat_sessions and chat_messages tables if they do not exist.
+Creates chat_sessions and chat_ai tables. Generates a user UUID per session if not provided (same session = same user).
 """
+import uuid
 from typing import List, Optional
 
 from skin_assistant.config import get_settings
@@ -32,7 +33,7 @@ def _get_connection():
 
 
 def _ensure_tables(conn) -> bool:
-    """Create chat_sessions and chat_messages if not exist. Returns True on success."""
+    """Create chat_sessions and chat_ai if not exist. Returns True on success."""
     if conn is None:
         return False
     try:
@@ -41,22 +42,46 @@ def _ensure_tables(conn) -> bool:
                 CREATE TABLE IF NOT EXISTS chat_sessions (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     session_id VARCHAR(128) NOT NULL UNIQUE,
-                    user_id VARCHAR(128) NULL,
+                    user_id VARCHAR(36) NULL,
+                    user_email VARCHAR(255) NULL,
+                    user_name VARCHAR(255) NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_session (session_id)
+                    INDEX idx_session (session_id),
+                    INDEX idx_user (user_id)
                 )
             """)
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS chat_messages (
+                CREATE TABLE IF NOT EXISTS chat_ai (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
                     session_id VARCHAR(128) NOT NULL,
                     role VARCHAR(32) NOT NULL,
                     content TEXT NOT NULL,
                     image_analysis VARCHAR(255) NULL,
+                    is_ai_response TINYINT(1) NOT NULL DEFAULT 0,
+                    sender VARCHAR(255) NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_session_created (session_id, created_at)
+                    INDEX idx_user_session (user_id, session_id),
+                    INDEX idx_session_created (session_id, created_at),
+                    INDEX idx_is_ai (is_ai_response)
                 )
             """)
+            try:
+                cur.execute("ALTER TABLE chat_sessions ADD COLUMN user_email VARCHAR(255) NULL")
+            except Exception:
+                pass
+            try:
+                cur.execute("ALTER TABLE chat_sessions ADD COLUMN user_name VARCHAR(255) NULL")
+            except Exception:
+                pass
+            try:
+                cur.execute("ALTER TABLE chat_ai ADD COLUMN is_ai_response TINYINT(1) NOT NULL DEFAULT 0")
+            except Exception:
+                pass
+            try:
+                cur.execute("ALTER TABLE chat_ai ADD COLUMN sender VARCHAR(255) NULL")
+            except Exception:
+                pass
         conn.commit()
         return True
     except Exception:
@@ -91,26 +116,57 @@ class ChatRepository:
             except Exception:
                 pass
 
-    def ensure_session(self, session_id: str, user_id: Optional[str] = None) -> bool:
-        """Insert session if not exists. Returns True on success."""
+    def ensure_session(
+        self,
+        session_id: str,
+        user_id: Optional[str] = None,
+        user_email: Optional[str] = None,
+        user_name: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Insert session if not exists. If user_id is not provided, generate a UUID so same session = same user.
+        When user is logged in (FE sends user_id, user_email, user_name), store them in DB.
+        Returns the user_id for this session (existing or newly generated).
+        """
         conn = self._conn()
         if conn is None:
-            return False
+            return None
         try:
             _ensure_tables(conn)
+            sid = session_id[:128]
+            uid = (user_id or "").strip() or None
+            email = (user_email or "").strip()[:255] or None
+            name = (user_name or "").strip()[:255] or None
             with conn.cursor() as cur:
+                cur.execute("SELECT user_id, user_email, user_name FROM chat_sessions WHERE session_id = %s", (sid,))
+                row = cur.fetchone()
+                if row and row.get("user_id"):
+                    if uid or email or name:
+                        cur.execute(
+                            "UPDATE chat_sessions SET user_id = COALESCE(%s, user_id), user_email = COALESCE(%s, user_email), user_name = COALESCE(%s, user_name) WHERE session_id = %s",
+                            (uid[:36] if uid else None, email, name, sid),
+                        )
+                    conn.commit()
+                    return row["user_id"]
+                if not uid:
+                    uid = str(uuid.uuid4())
                 cur.execute(
-                    "INSERT IGNORE INTO chat_sessions (session_id, user_id) VALUES (%s, %s)",
-                    (session_id[:128], (user_id or "")[:128] or None),
+                    "INSERT IGNORE INTO chat_sessions (session_id, user_id, user_email, user_name) VALUES (%s, %s, %s, %s)",
+                    (sid, uid[:36], email, name),
                 )
-            conn.commit()
-            return True
+                if cur.rowcount == 0:
+                    cur.execute(
+                        "UPDATE chat_sessions SET user_id = COALESCE(%s, user_id), user_email = COALESCE(%s, user_email), user_name = COALESCE(%s, user_name) WHERE session_id = %s AND (user_id IS NULL OR user_id = '')",
+                        (uid[:36], email, name, sid),
+                    )
+                conn.commit()
+            return uid[:36]
         except Exception:
             try:
                 conn.rollback()
             except Exception:
                 pass
-            return False
+            return None
         finally:
             try:
                 conn.close()
@@ -123,19 +179,41 @@ class ChatRepository:
         role: str,
         content: str,
         image_analysis: Optional[str] = None,
+        user_id: Optional[str] = None,
+        user_email: Optional[str] = None,
+        user_name: Optional[str] = None,
     ) -> bool:
-        """Append one chat message. Creates session if needed. Returns True on success."""
+        """
+        Append one chat message to chat_ai. Creates session if needed.
+        Sets is_ai_response (1=AI, 0=user/admin) and sender (e.g. 'assistant', user email, or 'user').
+        """
         if not self.is_available():
             return False
-        self.ensure_session(session_id)
+        uid = self.ensure_session(session_id, user_id=user_id, user_email=user_email, user_name=user_name)
+        if not uid:
+            return False
+        role_lower = (role or "").strip().lower()
+        is_ai = 1 if role_lower == "assistant" else 0
+        if role_lower == "assistant":
+            sender = "assistant"
+        else:
+            sender = (user_email or "").strip()[:255] or (user_id or "").strip()[:255] or "user"
         conn = self._conn()
         if conn is None:
             return False
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO chat_messages (session_id, role, content, image_analysis) VALUES (%s, %s, %s, %s)",
-                    (session_id[:128], role[:32], content[:65535], (image_analysis or "")[:255] or None),
+                    "INSERT INTO chat_ai (user_id, session_id, role, content, image_analysis, is_ai_response, sender) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        uid[:36],
+                        session_id[:128],
+                        role[:32],
+                        content[:65535],
+                        (image_analysis or "")[:255] or None,
+                        is_ai,
+                        sender[:255] if sender else None,
+                    ),
                 )
             conn.commit()
             return True
@@ -152,14 +230,14 @@ class ChatRepository:
                 pass
 
     def get_history(self, session_id: str, limit: int = 100) -> List[dict]:
-        """Return messages for session, newest last. Each dict: role, content, image_analysis, created_at."""
+        """Return messages for session from chat_ai, newest last. Each dict: role, content, image_analysis, created_at (and is_ai_response, sender if present)."""
         conn = self._conn()
         if conn is None:
             return []
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT role, content, image_analysis, created_at FROM chat_messages WHERE session_id = %s ORDER BY id ASC LIMIT %s",
+                    "SELECT role, content, image_analysis, created_at FROM chat_ai WHERE session_id = %s ORDER BY id ASC LIMIT %s",
                     (session_id[:128], limit),
                 )
                 rows = cur.fetchall()

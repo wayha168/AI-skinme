@@ -215,6 +215,12 @@ CONCERN_WORDS = [
     "skin", "face", "moistur", "wrinkle", "aging", "pigment", "dull", "flaky", "tight",
 ]
 
+# Specific problem types — when present we use this message for product fit; otherwise prefer last concern from history
+SPECIFIC_CONCERN_WORDS = [
+    "dry", "acne", "oil", "oily", "sensitive", "redness", "burn", "burned", "itch",
+    "wrinkle", "aging", "pigment", "dull", "flaky", "tight", "breakout", "rash",
+]
+
 
 def _message_has_concern(text: str) -> bool:
     """True if the message clearly describes a skin concern (so we use it for product search)."""
@@ -222,6 +228,14 @@ def _message_has_concern(text: str) -> bool:
         return False
     t = text.strip().lower()
     return any(c in t for c in CONCERN_WORDS)
+
+
+def _message_has_specific_concern(text: str) -> bool:
+    """True if the message names a specific skin problem (dry, acne, burn, etc.) so we use it for recommendations."""
+    if not text or len(text.strip()) < 4:
+        return False
+    t = text.strip().lower()
+    return any(c in t for c in SPECIFIC_CONCERN_WORDS)
 
 
 def _last_user_concern(conversation_history: list[dict]) -> Optional[str]:
@@ -391,8 +405,8 @@ class ChatService:
         )
         if has_product_intent:
             max_price = _parse_budget(user_message)
-            # Use the user's stated problem for recommendations: current message if it has a concern, else last concern from history
-            if _message_has_concern(user_message):
+            # Recommendations must fit the user's problem: use current message if it names a specific concern, else use last concern from history
+            if _message_has_specific_concern(user_message):
                 effective_concern = user_message
             elif history and _last_user_concern(history):
                 effective_concern = _last_user_concern(history)

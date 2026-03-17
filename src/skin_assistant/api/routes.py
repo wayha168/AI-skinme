@@ -63,8 +63,12 @@ def _to_product_out(d: dict) -> ProductOut:
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
     """Send a message and get the assistant reply. Set use_database=true to check products from MySQL (skinme_db).
-    If session_id is provided and MySQL is configured, the turn is saved to chat_messages."""
-    history = [{"role": m.role, "content": m.content} for m in req.history]
+    If session_id is provided and MySQL is configured, conversation history is loaded from DB and the turn is saved to chat_messages."""
+    if req.session_id and _chat_repo.is_available():
+        db_history = _chat_repo.get_history(req.session_id, limit=20)
+        history = [{"role": r["role"], "content": r["content"] or ""} for r in db_history]
+    else:
+        history = [{"role": m.role, "content": m.content} for m in req.history]
     reply = _chat.get_reply(
         req.message,
         conversation_history=history,
@@ -107,9 +111,14 @@ async def chat_with_image(
             pass
         finally:
             await image.close()
+    if session_id and _chat_repo.is_available():
+        db_history = _chat_repo.get_history(session_id, limit=20)
+        image_history = [{"role": r["role"], "content": r["content"] or ""} for r in db_history]
+    else:
+        image_history = []
     reply = _chat.get_reply(
         effective_message,
-        conversation_history=[],
+        conversation_history=image_history,
         use_llm=use_llm,
         use_database=use_database,
     )

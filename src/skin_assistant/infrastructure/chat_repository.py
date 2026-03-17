@@ -10,12 +10,8 @@ from skin_assistant.config import get_settings
 def _get_connection():
     """Return a DB connection or None if MySQL not configured."""
     s = get_settings()
-    if not getattr(s, "use_mysql_db", None) and not (
-        getattr(s, "mysql_host", None) and getattr(s, "mysql_user", None) and getattr(s, "mysql_database", None)
-    ):
-        # Recheck use_mysql_db style
-        if not (s.mysql_host and s.mysql_user and s.mysql_database):
-            return None
+    if not s.use_mysql_db:
+        return None
     try:
         import pymysql
     except ImportError:

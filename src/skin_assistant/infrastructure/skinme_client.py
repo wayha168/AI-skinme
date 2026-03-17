@@ -75,10 +75,11 @@ def load_existing_csv(csv_path: Path) -> pd.DataFrame:
 def sync_products_to_csv(
     csv_path: Optional[Path] = None,
     api_url: Optional[str] = None,
+    overwrite_existing: bool = False,
 ) -> dict:
     """
-    Fetch current products from API and overwrite CSV with latest data.
-    Returns stats: added, removed, total.
+    Fetch products from API. Write CSV only if it does not exist or is empty, unless overwrite_existing=True.
+    Returns stats: total, added, removed, path, skipped (True if existing data was left as-is).
     """
     settings = get_settings()
     csv_path = csv_path or settings.skinme_products_path
@@ -88,5 +89,21 @@ def sync_products_to_csv(
     new_ids = {str(p["id"]) for p in products}
     added = len(new_ids - old_ids)
     removed = len(old_ids - new_ids)
+
+    if not overwrite_existing and csv_path.exists() and not old_df.empty:
+        return {
+            "total": len(old_df),
+            "added": added,
+            "removed": removed,
+            "path": str(csv_path),
+            "skipped": True,
+            "message": "CSV already exists; left as-is. Run sync with overwrite to refresh.",
+        }
     products_to_csv(products, csv_path)
-    return {"total": len(products), "added": added, "removed": removed, "path": str(csv_path)}
+    return {
+        "total": len(products),
+        "added": added,
+        "removed": removed,
+        "path": str(csv_path),
+        "skipped": False,
+    }

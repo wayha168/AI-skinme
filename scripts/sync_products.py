@@ -106,17 +106,21 @@ def do_sync(
     no_download: bool = False,
     no_cleanup: bool = False,
     no_sync: bool = False,
+    overwrite_existing: bool = False,
 ) -> int:
-    """Run sync: API -> CSV, optional download images, optional cleanup unused files."""
+    """
+    Run sync: fetch from backend -> CSV (if not existing or overwrite_existing), download only missing images, cleanup.
+    When overwrite_existing=False, existing CSV is left as-is; images are always skipped if file already exists.
+    """
     settings = get_settings()
     csv_path = settings.skinme_products_path
     images_dir = settings.product_images_dir
 
     if not no_sync:
-        stats = sync_products_to_csv(csv_path=csv_path)
+        stats = sync_products_to_csv(csv_path=csv_path, overwrite_existing=overwrite_existing)
         print("Sync:", stats)
         if csv_path.exists():
-            print(f"CSV: {csv_path} ({stats['total']} products)")
+            print(f"CSV: {csv_path} ({stats['total']} products)" + (" (left existing)" if stats.get("skipped") else ""))
         else:
             print("No CSV written; sync failed or no data.")
             return 1
@@ -137,8 +141,14 @@ def main():
     parser.add_argument("--no-download", action="store_true", help="Skip downloading product images")
     parser.add_argument("--no-cleanup", action="store_true", help="Skip deleting unused image files")
     parser.add_argument("--no-sync", action="store_true", help="Skip API fetch (only download/cleanup with existing CSV)")
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing CSV; default is to leave existing data")
     args = parser.parse_args()
-    return do_sync(no_download=args.no_download, no_cleanup=args.no_cleanup, no_sync=args.no_sync)
+    return do_sync(
+        no_download=args.no_download,
+        no_cleanup=args.no_cleanup,
+        no_sync=args.no_sync,
+        overwrite_existing=args.overwrite,
+    )
 
 
 if __name__ == "__main__":

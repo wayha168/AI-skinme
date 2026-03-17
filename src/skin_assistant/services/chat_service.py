@@ -1,5 +1,6 @@
 """Chat service: retrieval + optional LLM for skin assistant replies."""
 import os
+import re
 from typing import Optional
 
 from skin_assistant.infrastructure import KnowledgeRepository
@@ -26,6 +27,27 @@ def _detect_concern_type(text: str) -> Optional[str]:
         if key in t:
             return ptype
     return None
+
+
+def _is_recommendation_request(text: str) -> bool:
+    """True when user is asking for product recommendations — reply must use DB/synced products only."""
+    msg = text.strip().lower()
+    return any(
+        w in msg
+        for w in (
+            "recommend",
+            "recommendation",
+            "suggest",
+            "suggestion",
+            "products for",
+            "product for",
+            "for my skin",
+            "for dry",
+            "for oily",
+            "for acne",
+            "for sensitive",
+        )
+    )
 
 
 # Follow-up questions when user mentions a skin problem vaguely (like a real person would ask)
@@ -182,14 +204,130 @@ def _format_product(prod: dict) -> str:
     return line
 
 
+def _is_short_affirmation(text: str) -> bool:
+    """True if the message is a short yes/ok style reply."""
+    t = text.strip().lower()
+    return t in ("yes", "yeah", "yep", "yea", "ok", "okay", "sure", "yup", "please", "go ahead")
+
+
+CONCERN_WORDS = [
+    "dry", "acne", "oil", "oily", "sensitive", "redness", "burn", "burned", "itch",
+    "skin", "face", "moistur", "wrinkle", "aging", "pigment", "dull", "flaky", "tight",
+]
+
+
+def _message_has_concern(text: str) -> bool:
+    """True if the message clearly describes a skin concern (so we use it for product search)."""
+    if not text or len(text.strip()) < 4:
+        return False
+    t = text.strip().lower()
+    return any(c in t for c in CONCERN_WORDS)
+
+
+def _last_user_concern(conversation_history: list[dict]) -> Optional[str]:
+    """Return the last user message that mentions a skin concern, for context after 'yes' / 'ok' or generic 'product for my problem'."""
+    for m in reversed(conversation_history):
+        if m.get("role") != "user":
+            continue
+        content = (m.get("content") or "").strip()
+        if len(content) > 8 and _message_has_concern(content):
+            return content
+    return None
+
+
+def _parse_budget(text: str) -> Optional[float]:
+    """Parse max price/budget from message (e.g. '15$', 'under 15', 'budget 20', 'max 10 dollars'). Returns None if not found."""
+    if not text or not text.strip():
+        return None
+    # Match numbers with optional $ or "dollars" / "dollar"
+    # e.g. 15$, $15, under 15, budget 20, max 10 dollars, under $15
+    patterns = [
+        r"(?:under|below|max|budget|within)\s*\$?\s*(\d+(?:\.\d+)?)",
+        r"\$?\s*(\d+(?:\.\d+)?)\s*(?:dollars?|\$|usd)?",
+        r"(\d+(?:\.\d+)?)\s*\$",
+    ]
+    for pat in patterns:
+        m = re.search(pat, text.strip(), re.IGNORECASE)
+        if m:
+            try:
+                return float(m.group(1))
+            except (ValueError, IndexError):
+                pass
+    return None
+
+
+def _filter_products_by_price(products: list[dict], max_price: float) -> list[dict]:
+    """Keep only products with price <= max_price. Price may be string or number."""
+    out = []
+    for p in products:
+        raw = p.get("price")
+        if raw is None or raw == "":
+            continue
+        try:
+            price = float(raw) if not isinstance(raw, (int, float)) else raw
+            if price <= max_price:
+                out.append(p)
+        except (ValueError, TypeError):
+            continue
+    return out
+
+
 class ChatService:
     """Produces assistant replies from user message and optional history."""
 
     def __init__(self, repo: Optional[KnowledgeRepository] = None):
         self._repo = repo or KnowledgeRepository()
 
-    def reply_with_retrieval(self, user_message: str, use_database: bool = False) -> str:
+    def reply_with_retrieval(
+        self,
+        user_message: str,
+        use_database: bool = False,
+        conversation_history: Optional[list[dict]] = None,
+    ) -> str:
         msg = user_message.strip().lower()
+        history = conversation_history or []
+
+        # Short affirmation after we asked a follow-up: use previous user message as context
+        if _is_short_affirmation(user_message):
+            prev_concern = _last_user_concern(history)
+            if prev_concern:
+                concern_type = _detect_concern_type(prev_concern)
+                use_db = use_database or _is_recommendation_request(prev_concern)
+                ing_hits = self._repo.search_ingredients(prev_concern, 4)
+                prod_hits = self._repo.search_products_by_concern(
+                    prev_concern, product_type=concern_type, top_k=10, use_database=use_db
+                )
+                max_price = _parse_budget(user_message)
+                if max_price is not None:
+                    prod_hits = _filter_products_by_price(prod_hits, max_price)[:8]
+                    if not prod_hits:
+                        prod_hits = self._repo.search_products_by_concern(
+                            prev_concern, product_type=concern_type, top_k=20, use_database=use_db
+                        )
+                        prod_hits = sorted(
+                            prod_hits,
+                            key=lambda p: float(p.get("price") or 999) if p.get("price") else 999,
+                        )[:5]
+                else:
+                    prod_hits = prod_hits[:5]
+                parts = []
+                if ing_hits and max_price is None:
+                    parts.append("**Ingredients that may help:**\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3]))
+                if prod_hits:
+                    if max_price is not None:
+                        parts.append(f"Here are products **within your ${max_price:.0f} budget**:\n" + "\n".join(_format_product(p) for p in prod_hits))
+                    else:
+                        parts.append("**Product suggestions:**\n" + "\n".join(_format_product(p) for p in prod_hits))
+                if parts:
+                    return "Based on what you told me, here are some suggestions:\n\n" + "\n\n".join(parts)
+                return (
+                    "I’d like to suggest the right products. Can you tell me a bit more? "
+                    "For example: Is your skin mostly dry or sensitive? Which area is most affected — face or body?"
+                )
+            return (
+                "Could you tell me a bit more so I can recommend the right products? "
+                "For example: What’s your main skin concern — dryness, acne, sensitivity, or something else?"
+            )
 
         # Products with [ingredient]
         for start in ("products with ", "products containing ", "product with ", "containing "):
@@ -232,9 +370,9 @@ class ChatService:
         if followup:
             return followup
 
-        # Products for concern
+        # Products for concern — when user says "Recommend" or similar, always use DB products
         concern_type = _detect_concern_type(user_message)
-        if concern_type or any(
+        has_product_intent = concern_type or any(
             w in msg
             for w in (
                 "product",
@@ -247,27 +385,52 @@ class ChatService:
                 "for acne",
                 "moisturiser",
                 "moisturizer",
+                "budget",
+                "under",
             )
-        ):
-            ing_hits = self._repo.search_ingredients(user_message, 4)
+        )
+        if has_product_intent:
+            max_price = _parse_budget(user_message)
+            # Use the user's stated problem for recommendations: current message if it has a concern, else last concern from history
+            if _message_has_concern(user_message):
+                effective_concern = user_message
+            elif history and _last_user_concern(history):
+                effective_concern = _last_user_concern(history)
+            else:
+                effective_concern = user_message
+            concern_type = _detect_concern_type(effective_concern)
+            use_db = use_database or _is_recommendation_request(user_message) or _is_recommendation_request(effective_concern)
             prod_hits = self._repo.search_products_by_concern(
-                user_message, product_type=concern_type, top_k=5, use_database=use_database
+                effective_concern, product_type=concern_type, top_k=10, use_database=use_db
             )
+            if max_price is not None:
+                within_budget = _filter_products_by_price(prod_hits, max_price)
+                if within_budget:
+                    prod_hits = within_budget[:8]
+                    budget_header = f"Here are products **within your ${max_price:.0f} budget**:\n"
+                else:
+                    def _price_val(p):
+                        try:
+                            return float(p.get("price") or 999)
+                        except (ValueError, TypeError):
+                            return 999
+                    prod_hits = sorted(prod_hits, key=_price_val)[:5]
+                    budget_header = f"We don't have products under ${max_price:.0f}. Here are the **closest in price**:\n"
+                if not prod_hits:
+                    return f"We don't have any products under ${max_price:.0f} right now. Try a higher budget or different concern."
+                return budget_header + "\n".join(_format_product(p) for p in prod_hits)
+            prod_hits = prod_hits[:5]
+            ing_hits = self._repo.search_ingredients(effective_concern, 4)
             parts = []
-            if ing_hits:
-                parts.append("**Ingredients that may help:**\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3]))
             if prod_hits:
+                if ing_hits:
+                    parts.append("**Ingredients that may help:**\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3]))
                 parts.append("**Product suggestions:**\n" + "\n".join(_format_product(p) for p in prod_hits))
             if parts:
                 return "\n\n".join(parts)
 
-        # General ingredient search
-        ing_hits = self._repo.search_ingredients(user_message, 5)
-        if ing_hits:
-            return "**Matching ingredients:**\n\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits)
-
-        # Greeting
-        if any(w in msg for w in ("hi", "hello", "hey")):
+        # Greeting — check before ingredient search so "Hi" doesn't match random ingredients
+        if any(w in msg for w in ("hi", "hello", "hey")) and len(msg) < 20:
             return (
                 "Hi! I'm your Skin Assistant. You can ask me:\n"
                 "• **What is [ingredient]?** — e.g. \"What is niacinamide?\"\n"
@@ -275,6 +438,11 @@ class ChatService:
                 "• **Products with [ingredient]** — I'll suggest products that contain it.\n"
                 "Ask me anything about ingredients or product recommendations."
             )
+
+        # General ingredient search (only if message looks like a real query, not a greeting or affirmation)
+        ing_hits = self._repo.search_ingredients(user_message, 5)
+        if ing_hits:
+            return "**Matching ingredients:**\n\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits)
 
         return (
             "I'm not sure how to answer that. Try asking:\n"
@@ -287,17 +455,22 @@ class ChatService:
         self, user_message: str, conversation_history: list[dict], use_database: bool = False
     ) -> str:
         if not os.environ.get("OPENAI_API_KEY"):
-            return self.reply_with_retrieval(user_message, use_database=use_database)
+            return self.reply_with_retrieval(
+                user_message, use_database=use_database, conversation_history=conversation_history
+            )
         try:
             from openai import OpenAI
             client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         except Exception:
-            return self.reply_with_retrieval(user_message)
+            return self.reply_with_retrieval(
+                user_message, conversation_history=conversation_history
+            )
 
         ing_hits = self._repo.search_ingredients(user_message, 5)
         concern_type = _detect_concern_type(user_message)
+        use_db = use_database or _is_recommendation_request(user_message)
         prod_hits = self._repo.search_products_by_concern(
-            user_message, product_type=concern_type, top_k=5, use_database=use_database
+            user_message, product_type=concern_type, top_k=5, use_database=use_db
         )
         context_parts = []
         if ing_hits:
@@ -335,7 +508,9 @@ Be brief. When recommending products, mention 1–3 by name and price. Do not ma
             )
             return resp.choices[0].message.content.strip()
         except Exception:
-            return self.reply_with_retrieval(user_message, use_database=use_database)
+            return self.reply_with_retrieval(
+                user_message, use_database=use_database, conversation_history=conversation_history
+            )
 
     def get_reply(
         self,
@@ -351,4 +526,6 @@ Be brief. When recommending products, mention 1–3 by name and price. Do not ma
         history = conversation_history or []
         if use_llm and os.environ.get("OPENAI_API_KEY"):
             return self.reply_with_llm(user_message, history, use_database=use_database)
-        return self.reply_with_retrieval(user_message, use_database=use_database)
+        return self.reply_with_retrieval(
+            user_message, use_database=use_database, conversation_history=history
+        )

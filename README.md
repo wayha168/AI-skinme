@@ -1,4 +1,4 @@
-# Skin Assistant
+﻿# Skin Assistant
 
 AI skincare assistant: REST API, product data sync from [SkinMe API](https://backend.skinme.store/api/v1/products/all), CSV export, optional scraping (bs4), and ML training (intent + product text + image).
 
@@ -6,25 +6,25 @@ AI skincare assistant: REST API, product data sync from [SkinMe API](https://bac
 
 ```
 Data-Mining/
-├── data/                      # CSVs (ingredients, skinme_products, etc.)
-│   ├── product_images/        # Downloaded product images (sync)
-│   ├── skin_disease_images/   # Optional: images for skin condition training
-│   └── skin_disease_labels.csv.example  # Optional: image_name, condition for training
-├── models/
-│   └── artifacts/             # intent_model.joblib, product_type_model.joblib, product_image_model.pt
-├── scripts/
-│   ├── train.py               # Train intent model
-│   ├── sync_products.py       # Fetch API -> CSV, download images, cleanup unused
-│   └── train_products.py      # Train product text + optional image model
-├── src/skin_assistant/
-│   ├── api/                   # FastAPI app & routes
-│   ├── config/                # Settings & paths
-│   ├── domain/                # Schemas (DTOs)
-│   ├── infrastructure/        # KnowledgeRepository, skinme_client, scraper (bs4)
-│   ├── models/                # ML: intent trainer, product_trainer (text + image)
-│   └── services/              # Chat service
-├── main.py                    # serve | sync | train | train-products | train-skin-condition
-└── pyproject.toml
+â”œâ”€â”€ data/                      # CSVs (ingredients, skinme_products, etc.)
+â”‚   â”œâ”€â”€ product_images/        # Downloaded product images (sync)
+â”‚   â”œâ”€â”€ skin_disease_images/   # Optional: images for skin condition training
+â”‚   â””â”€â”€ skin_disease_labels.csv.example  # Optional: image_name, condition for training
+â”œâ”€â”€ models/
+â”‚   â””â”€â”€ artifacts/             # intent_model.joblib, product_type_model.joblib, product_image_model.pt
+â”œâ”€â”€ scripts/
+â”‚   â”œâ”€â”€ train.py               # Train intent model
+â”‚   â”œâ”€â”€ sync_products.py       # Fetch API -> CSV, download images, cleanup unused
+â”‚   â””â”€â”€ train_products.py      # Train product text + optional image model
+â”œâ”€â”€ src/skin_assistant/
+â”‚   â”œâ”€â”€ api/                   # FastAPI app & routes
+â”‚   â”œâ”€â”€ config/                # Settings & paths
+â”‚   â”œâ”€â”€ domain/                # Schemas (DTOs)
+â”‚   â”œâ”€â”€ infrastructure/        # KnowledgeRepository, skinme_client, scraper (bs4)
+â”‚   â”œâ”€â”€ models/                # ML: intent trainer, product_trainer (text + image)
+â”‚   â””â”€â”€ services/              # Chat service
+â”œâ”€â”€ main.py                    # serve | sync | train | train-products | train-skin-condition
+â””â”€â”€ pyproject.toml
 ```
 
 ## Run the API (backend integration)
@@ -39,19 +39,19 @@ python main.py
 API base: `http://localhost:8000`
 
 - **OpenAPI docs:** http://localhost:8000/docs  
-- **POST /v1/chat** — Chat with the assistant (body: `{"message": "...", "history": [], "use_llm": true, "session_id": "optional-for-DB"}`). If `session_id` is set and MySQL is configured, the turn is saved to `chat_messages`.  
-- **POST /v1/chat/with-image** — Send a skin photo + optional message (multipart: `message`, `image`, `session_id?`). We analyze the image and reply with recommendations; turn is saved to DB when `session_id` is set.  
-- **GET /v1/ingredients/search?q=niacinamide** — Search ingredients  
-- **GET /v1/ingredients/{name}** — Get ingredient by name  
-- **GET /v1/products?concern=dry** or **?ingredient=hyaluronic+acid** — Product search  
-- **GET /v1/intent?q=...** — Predict intent (needs trained model)  
-- **GET /v1/routes** — List all route paths for backend integration  
-- **GET /v1/health** — Health check  
+- **POST /v1/chat** â€” Chat with the assistant (body: `{"message": "...", "history": [], "use_llm": true, "session_id": "optional-for-DB"}`). If `session_id` is set and MySQL is configured, the turn is saved to `chat_messages`.  
+- **POST /v1/chat/with-image** â€” Send a skin photo + optional message (multipart: `message`, `image`, `session_id?`). We analyze the image and reply with recommendations; turn is saved to DB when `session_id` is set.  
+- **GET /v1/ingredients/search?q=niacinamide** â€” Search ingredients  
+- **GET /v1/ingredients/{name}** â€” Get ingredient by name  
+- **GET /v1/products?concern=dry** or **?ingredient=hyaluronic+acid** â€” Product search  
+- **GET /v1/intent?q=...** â€” Predict intent (needs trained model)  
+- **GET /v1/routes** â€” List all route paths for backend integration  
+- **GET /v1/health** â€” Health check  
 
 **Save-to-database (Spring backend integration):**
 
-- **POST /v1/chat/log** — Log a chat turn (session_id, user_id, message, reply) so your backend can persist to DB.  
-- **POST /v1/feedback** — Save user feedback (session_id, rating/thumbs_up, comment) for DB.  
+- **POST /v1/chat/log** â€” Log a chat turn (session_id, user_id, message, reply) so your backend can persist to DB.  
+- **POST /v1/feedback** â€” Save user feedback (session_id, rating/thumbs_up, comment) for DB.  
 
 If you set `SPRING_BACKEND_URL` (e.g. `http://localhost:8080`), the API forwards these payloads to your Spring app (`POST {url}/api/v1/chat/log` and `POST {url}/api/v1/feedback`). Implement those endpoints in Spring to save to your database.
 
@@ -59,18 +59,18 @@ If you set `SPRING_BACKEND_URL` (e.g. `http://localhost:8080`), the API forwards
 
 You can **check with the live database** when chatting or searching products. Set these **environment variables** (never commit real credentials; use `.env` and keep it out of git):
 
-- `MYSQL_HOST` — e.g. your MySQL server host  
-- `MYSQL_PORT` — default `3306`  
-- `MYSQL_USER` — DB user  
-- `MYSQL_PASSWORD` — DB password  
-- `MYSQL_DATABASE` — e.g. `skinme_db`  
-- `MYSQL_PRODUCTS_TABLE` — optional; default `product`
+- `MYSQL_HOST` â€” e.g. your MySQL server host  
+- `MYSQL_PORT` â€” default `3306`  
+- `MYSQL_USER` â€” DB user  
+- `MYSQL_PASSWORD` â€” DB password  
+- `MYSQL_DATABASE` â€” e.g. `skinme_db`  
+- `MYSQL_PRODUCTS_TABLE` â€” optional; default `product`
 
 Copy `.env.example` to `.env`, fill in the MySQL section, and load it (e.g. `python-dotenv` or export in shell). Then:
 
 - **Chat:** Send `POST /v1/chat` with `"use_database": true` in the body to get product suggestions from MySQL.
 - **Product search:** `GET /v1/products?concern=dry&use_database=true` to search the database.
-- **Streamlit:** Use the sidebar checkbox “Check with database (skinme_db)”.
+- **Streamlit:** Use the sidebar checkbox â€œCheck with database (skinme_db)â€.
 
 Example:
 
@@ -78,7 +78,7 @@ Example:
 curl -X POST http://localhost:8000/v1/chat -H "Content-Type: application/json" -d "{\"message\": \"What is niacinamide?\"}"
 ```
 
-## Sync product data (SkinMe API → CSV, images, cleanup)
+## Sync product data (SkinMe API â†’ CSV, images, cleanup)
 
 Fetches from `https://backend.skinme.store/api/v1/products/all`, writes `data/skinme_products.csv`, downloads images to `data/product_images/`, and **deletes image files for products no longer in the API**.
 
@@ -138,7 +138,7 @@ For image training: `pip install torch torchvision`.
 
 ## Product recommendations from SkinMe
 
-The chatbot and **GET /v1/products?concern=...** use the **SkinMe** product database first (`data/skinme_products.csv`). Run `python main.py sync` to fetch the latest products. For “recommend products for dry skin” or “I have acne”, results come from SkinMe; “products containing [ingredient]” still uses `data/skincare_products_clean.csv` when ingredient lists are available.
+The chatbot and **GET /v1/products?concern=...** use the **SkinMe** product database first (`data/skinme_products.csv`). Run `python main.py sync` to fetch the latest products. For â€œrecommend products for dry skinâ€ or â€œI have acneâ€, results come from SkinMe; â€œproducts containing [ingredient]â€ still uses `data/skincare_products_clean.csv` when ingredient lists are available.
 
 ## Train skin condition classifier (ingredients + skin disease images)
 
@@ -155,7 +155,7 @@ python main.py train-skin-condition
 python -m scripts.train_skin_condition --images data/skin_disease_images --csv data/skin_disease_labels.csv --epochs 10
 ```
 
-Model is saved to `models/artifacts/skin_condition_model.pt`. Use it to predict condition from a user image and then recommend products from the SkinMe database by mapping condition → concern (e.g. acne → “acne” concern search).
+Model is saved to `models/artifacts/skin_condition_model.pt`. Use it to predict condition from a user image and then recommend products from the SkinMe database by mapping condition â†’ concern (e.g. acne â†’ â€œacneâ€ concern search).
 
 ## Optional: Streamlit chat UI
 
@@ -164,7 +164,7 @@ pip install streamlit
 streamlit run app.py
 ```
 
-(Requires the legacy `skin_chatbot`/`skin_knowledge` modules at project root, or point the app to the API.)
+(Run from project root with `pip install -e .` so the `skin_assistant` package is available.)
 
 ## Optional: LLM replies
 
@@ -173,9 +173,4 @@ Set `OPENAI_API_KEY` so **POST /v1/chat** uses GPT with your ingredients/product
 ```bash
 set OPENAI_API_KEY=sk-...
 python main.py
-```
-#   s k i n m e - r e c o m m e n d a t i o n 
- 
- #   s k i n m e - r e c o m m e n d a t i o n 
- 
- 
+```   s k i n m e - r e c o m m e n d a t i o n 

@@ -20,13 +20,15 @@ try:
     from skin_assistant.infrastructure import ChatRepository
     _chat = ChatService()
     _chat_repo = ChatRepository()
+
     def get_reply(msg, conversation_history=None, use_llm=True, use_database=False):
         return _chat.get_reply(
             msg,
-            conversation_history=conversation_history,
+            conversation_history=conversation_history or [],
             use_llm=use_llm,
             use_database=use_database,
         )
+
     try:
         from skin_assistant.models.skin_condition_trainer import predict_skin_condition_from_image
         _has_skin_predictor = True
@@ -37,11 +39,9 @@ except ImportError:
     _has_skin_predictor = False
     predict_skin_condition_from_image = None
     _chat_repo = None
-    try:
-        from skin_chatbot import get_reply
-    except ImportError:
-        def get_reply(msg, conversation_history=None, use_llm=True, use_database=False):
-            return "Chat service not available. Install skin_assistant or skin_chatbot."
+
+    def get_reply(msg, conversation_history=None, use_llm=True, use_database=False):
+        return "Chat service not available. Install the project: pip install -e . (from project root)."
 
 st.set_page_config(
     page_title="Skin Assistant",

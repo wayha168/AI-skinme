@@ -15,13 +15,70 @@ SKINME_PRODUCTS_ALL = "https://backend.skinme.store/api/v1/products/all"
 SKINME_BASE = "https://backend.skinme.store"
 
 
+def _full_image_url(img: dict) -> str:
+    download_url = (img or {}).get("downloadUrl") or ""
+    if not download_url:
+        return ""
+    return (SKINME_BASE + download_url) if download_url.startswith("/") else download_url
+
+
+def _deduped_image_urls(images: list) -> list[str]:
+    """Ordered unique image URLs from API images array (no duplicate URLs)."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for img in images or []:
+        full = _full_image_url(img if isinstance(img, dict) else {})
+        if not full or full in seen:
+            continue
+        seen.add(full)
+        out.append(full)
+    return out
+
+
+def primary_image_url_from_row(image_url: object, all_image_urls: object) -> str:
+    """
+    Primary image for a CSV/DB row: prefer image_url, else first segment of all_image_urls.
+    Supports legacy CSV where all_image_urls listed every image including the first.
+    """
+    if image_url is not None and not pd.isna(image_url) and str(image_url).strip():
+        return str(image_url).strip()
+    if all_image_urls is None or pd.isna(all_image_urls):
+        return ""
+    for part in str(all_image_urls).split("|"):
+        p = part.strip()
+        if p:
+            return p
+    return ""
+
+
+def all_image_urls_for_row(image_url: object, all_image_urls: object) -> list[str]:
+    """
+    Full ordered list: primary (image_url) plus additional gallery URLs (all_image_urls).
+    Dedupes when legacy rows repeat the primary inside all_image_urls.
+    """
+    primary = primary_image_url_from_row(image_url, "")
+    extras = "" if all_image_urls is None or pd.isna(all_image_urls) else str(all_image_urls)
+    out: list[str] = []
+    if primary:
+        out.append(primary)
+    for part in extras.split("|"):
+        p = part.strip()
+        if not p:
+            continue
+        if p not in out:
+            out.append(p)
+    return out
+
+
 def _normalize_product(p: dict) -> dict:
     """Flatten one API product into a CSV row."""
     cat = p.get("category") or {}
     images = p.get("images") or []
     first_img = images[0] if images else {}
-    download_url = first_img.get("downloadUrl") or ""
-    full_image_url = (SKINME_BASE + download_url) if download_url.startswith("/") else download_url
+    urls = _deduped_image_urls(images)
+    primary = urls[0] if urls else ""
+    # all_image_urls = gallery only (no repeat of image_url) so the DB/CSV stays clean
+    additional = "|".join(urls[1:])
     return {
         "id": p.get("id"),
         "name": p.get("name"),
@@ -33,14 +90,10 @@ def _normalize_product(p: dict) -> dict:
         "howToUse": p.get("howToUse"),
         "category_id": cat.get("id"),
         "category_name": cat.get("name"),
-        "image_url": full_image_url,
+        "image_url": primary,
         "image_id": first_img.get("imageId"),
         "image_filename": first_img.get("fileName"),
-        "all_image_urls": "|".join(
-            (SKINME_BASE + (img.get("downloadUrl") or "")) if (img.get("downloadUrl") or "").startswith("/")
-            else (img.get("downloadUrl") or "")
-            for img in images
-        ),
+        "all_image_urls": additional,
     }
 
 

@@ -18,6 +18,7 @@ import requests
 from skin_assistant.config import get_settings
 from skin_assistant.infrastructure.skinme_client import (
     fetch_products,
+    primary_image_url_from_row,
     products_to_csv,
     load_existing_csv,
     sync_products_to_csv,
@@ -49,7 +50,7 @@ def download_product_images(csv_path: Path, images_dir: Path, timeout: int = 15)
     images_dir.mkdir(parents=True, exist_ok=True)
     downloaded = failed = skipped = 0
     for _, row in df.iterrows():
-        url = row.get("image_url") or row.get("all_image_urls", "").split("|")[0]
+        url = primary_image_url_from_row(row.get("image_url"), row.get("all_image_urls"))
         if not url or pd.isna(url):
             skipped += 1
             continue

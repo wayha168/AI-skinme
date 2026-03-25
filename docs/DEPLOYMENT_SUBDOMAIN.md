@@ -35,7 +35,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 
-# Copy and edit .env (MYSQL_*, SPRING_BACKEND_URL, OPENAI_API_KEY, etc.)
+# Copy and edit .env (MYSQL_*, SPRING_BACKEND_URL, GEMINI_API_KEY, etc.)
 cp .env.example .env
 nano .env
 ```
@@ -168,7 +168,7 @@ Ensure `.env` on the server includes at least:
 
 - `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` (same as backend)
 - `SPRING_BACKEND_URL=https://backend.skinme.store` (optional, for forwarding)
-- `OPENAI_API_KEY=...` (optional, for LLM replies)
+- `GEMINI_API_KEY=...` or `GOOGLE_API_KEY=...` (optional, for Gemini LLM replies)
 
 Optional for docs/links:
 
@@ -197,7 +197,7 @@ The API allows all origins by default. To restrict CORS to your domains, set `CO
 
 - [ ] DNS A/CNAME for `chatbot.skinme.store` → server IP
 - [ ] App runs on server (e.g. port 8000, bound to 127.0.0.1)
-- [ ] `.env` with MySQL and optional OPENAI_API_KEY, SPRING_BACKEND_URL
+- [ ] `.env` with MySQL and optional GEMINI_API_KEY, SPRING_BACKEND_URL
 - [ ] nginx (or Caddy) reverse proxy with SSL for `chatbot.skinme.store`
 - [ ] systemd (or Docker) so the app restarts on failure
 - [ ] Frontend calls `https://chatbot.skinme.store` for chat

@@ -84,11 +84,11 @@ if "attach_image" not in st.session_state:
 
 # Sidebar: options
 with st.sidebar:
-    use_llm = st.checkbox("Use LLM (GPT) for replies", value=True, help="Requires OPENAI_API_KEY")
+    use_llm = st.checkbox("Use LLM (Gemini) for replies", value=True, help="Requires GEMINI_API_KEY or GOOGLE_API_KEY")
     use_database = st.checkbox(
-        "Check with database (skinme_db)",
+        "Include products from MySQL (skinme_db)",
         value=False,
-        help="Query MySQL for product recommendations when configured (MYSQL_* env)",
+        help="Merge DB products with scraped skinme_products.csv when MYSQL_* is set in .env",
     )
     if _chat_repo and _chat_repo.is_available():
         st.caption("Chat is saved to database (skinme_db)")

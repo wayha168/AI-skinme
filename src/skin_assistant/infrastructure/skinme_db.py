@@ -83,6 +83,23 @@ class SkinMeDBClient:
             # Do not close conn; reuse for next call
             pass
 
+    def search_products_by_ingredient(self, ingredient: str, top_k: int = 5) -> List[dict]:
+        """Products whose name or description mentions the ingredient (for chat alignment with CSV scrape)."""
+        conn = self._get_connection()
+        if not conn or not ingredient or not ingredient.strip():
+            return []
+        table = self._settings.mysql_products_table
+        safe_table = "`" + table.replace("`", "``") + "`"
+        like_arg = f"%{ingredient.strip()}%"
+        try:
+            with conn.cursor() as cur:
+                sql = f"SELECT * FROM {safe_table} WHERE (name LIKE %s OR description LIKE %s) LIMIT %s"
+                cur.execute(sql, (like_arg, like_arg, top_k))
+                rows = cur.fetchall()
+            return [_row_to_product(dict(r)) for r in rows]
+        except Exception:
+            return []
+
     def close(self):
         if self._conn:
             try:

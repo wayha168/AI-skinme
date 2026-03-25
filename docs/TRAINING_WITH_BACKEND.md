@@ -84,7 +84,7 @@ API base: `http://localhost:8000`. The API loads models from `models/artifacts/`
 ### 2.5 Use the trained AI from your backend
 
 - Your backend (e.g. Spring) calls the Skin Assistant API:
-  - **POST /v1/chat** — get assistant reply (uses intent + ingredients + products; LLM if `OPENAI_API_KEY` set).
+  - **POST /v1/chat** — get assistant reply (uses intent + ingredients + products; LLM if `GEMINI_API_KEY` or `GOOGLE_API_KEY` set).
   - **GET /v1/intent?q=...** — intent prediction (uses trained intent model).
   - **GET /v1/products?concern=...** — product search (uses synced/SkinMe data or MySQL if `use_database=true`).
 - If `SPRING_BACKEND_URL` is set, the Skin Assistant API forwards **POST /v1/chat/log** and **POST /v1/feedback** to your backend so you can persist chat and feedback in your database. Implement those endpoints in Spring as in [SPRING_BACKEND_INTEGRATION.md](SPRING_BACKEND_INTEGRATION.md).

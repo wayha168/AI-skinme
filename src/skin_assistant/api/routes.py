@@ -62,7 +62,7 @@ def _to_product_out(d: dict) -> ProductOut:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    """Send a message and get the assistant reply. Set use_database=true to check products from MySQL (skinme_db).
+    """Send a message and get the assistant reply. Set use_database=true to merge MySQL products with scraped skinme_products.csv.
     If session_id is set and MySQL is configured, the turn is saved to chat_ai. When user is logged in, send user_id (and optionally user_email, user_name) to store in DB."""
     if req.session_id and _chat_repo.is_available():
         db_history = _chat_repo.get_history(req.session_id, limit=20)
@@ -177,15 +177,17 @@ def search_products(
     top_k: int = Query(5, ge=1, le=20),
     use_database: bool = Query(
         False,
-        description="If true, search products from MySQL (skinme_db) when configured.",
+        description="If true, merge results from MySQL skinme_db with scraped skinme_products.csv.",
     ),
 ) -> SearchProductsResponse:
     """
-    Search products by concern (e.g. dry skin) or by ingredient name.
-    Set use_database=true to query MySQL skinme_db.
+    Search products by concern or by ingredient mention.
+    Uses skinme_products.csv; adds MySQL when use_database=true and MYSQL_* is configured.
     """
     if ingredient:
-        results = _repo.get_products_containing_ingredient(ingredient, top_k=top_k)
+        results = _repo.get_products_containing_ingredient(
+            ingredient, top_k=top_k, use_database=use_database
+        )
         q = ingredient
     elif concern:
         results = _repo.search_products_by_concern(

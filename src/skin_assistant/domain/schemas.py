@@ -14,7 +14,7 @@ class ChatRequest(BaseModel):
     use_llm: bool = True
     use_database: bool = Field(
         False,
-        description="If true, product recommendations are fetched from MySQL (skinme_db) when configured.",
+        description="If true, merge MySQL skinme_db products with scraped skinme_products.csv for recommendations (requires MYSQL_* in .env).",
     )
     session_id: Optional[str] = Field(None, max_length=128, description="If set, this turn is saved to DB (skinme_db).")
     user_id: Optional[str] = Field(None, max_length=36, description="Logged-in user ID from FE (e.g. from auth). Stored in DB with chat.")

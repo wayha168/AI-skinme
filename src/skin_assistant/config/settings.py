@@ -20,7 +20,9 @@ def get_settings():
         "project_root": root,
         "data_dir": root / "data",
         "ingredients_path": root / "data" / "ingredientsList.csv",
+        "ingredient_lookup_path": root / "data" / "ingredient_lookup.csv",
         "products_path": root / "data" / "skincare_products_clean.csv",
+        "dataset_products_path": root / "data" / "products_ingredients_dataset.csv",
         "models_dir": root / "models" / "artifacts",
         # SkinMe API & scraped product data
         "skinme_api_url": "https://backend.skinme.store/api/v1/products/all",

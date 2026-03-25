@@ -1,0 +1,197 @@
+Metadata-Version: 2.4
+Name: skin-assistant
+Version: 0.2.0
+Summary: AI Skin Assistant API and ML models for skincare recommendations
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: uvicorn[standard]>=0.24.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: joblib>=1.3.0
+Requires-Dist: google-genai>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: httpx; extra == "dev"
+Provides-Extra: streamlit
+Requires-Dist: streamlit>=1.28.0; extra == "streamlit"
+
+# Skin Assistant
+
+AI skincare assistant: REST API, product data sync from [SkinMe API](https://backend.skinme.store/api/v1/products/all), CSV export, optional scraping (bs4), and ML training (intent + product text + image).
+
+## Clean architecture (grouped folders)
+
+```
+Data-Mining/
+â”œâ”€â”€ data/                      # CSVs (ingredients, skinme_products, etc.)
+â”‚   â”œâ”€â”€ product_images/        # Downloaded product images (sync)
+â”‚   â”œâ”€â”€ skin_disease_images/   # Optional: images for skin condition training
+â”‚   â””â”€â”€ skin_disease_labels.csv.example  # Optional: image_name, condition for training
+â”œâ”€â”€ models/
+â”‚   â””â”€â”€ artifacts/             # intent_model.joblib, product_type_model.joblib, product_image_model.pt
+â”œâ”€â”€ scripts/
+â”‚   â”œâ”€â”€ train.py               # Train intent model
+â”‚   â”œâ”€â”€ sync_products.py       # Fetch API -> CSV, download images, cleanup unused
+â”‚   â””â”€â”€ train_products.py      # Train product text + optional image model
+â”œâ”€â”€ src/skin_assistant/
+â”‚   â”œâ”€â”€ api/                   # FastAPI app & routes
+â”‚   â”œâ”€â”€ config/                # Settings & paths
+â”‚   â”œâ”€â”€ domain/                # Schemas (DTOs)
+â”‚   â”œâ”€â”€ infrastructure/        # KnowledgeRepository, skinme_client, scraper (bs4)
+â”‚   â”œâ”€â”€ models/                # ML: intent trainer, product_trainer (text + image)
+â”‚   â””â”€â”€ services/              # Chat service
+â”œâ”€â”€ main.py                    # serve | sync | train | train-products | train-skin-condition
+â””â”€â”€ pyproject.toml
+```
+
+## Run the API (backend integration)
+
+From project root:
+
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+API base: `http://localhost:8000`
+
+- **OpenAPI docs:** http://localhost:8000/docs  
+- **POST /v1/chat** â€” Chat with the assistant (body: `{"message": "...", "history": [], "use_llm": true, "session_id": "optional-for-DB"}`). If `session_id` is set and MySQL is configured, the turn is saved to `chat_messages`.  
+- **POST /v1/chat/with-image** â€” Send a skin photo + optional message (multipart: `message`, `image`, `session_id?`). We analyze the image and reply with recommendations; turn is saved to DB when `session_id` is set.  
+- **GET /v1/ingredients/search?q=niacinamide** â€” Search ingredients  
+- **GET /v1/ingredients/{name}** â€” Get ingredient by name  
+- **GET /v1/products?concern=dry** or **?ingredient=hyaluronic+acid** â€” Product search  
+- **GET /v1/intent?q=...** â€” Predict intent (needs trained model)  
+- **GET /v1/routes** â€” List all route paths for backend integration  
+- **GET /v1/health** â€” Health check  
+
+**Save-to-database (Spring backend integration):**
+
+- **POST /v1/chat/log** â€” Log a chat turn (session_id, user_id, message, reply) so your backend can persist to DB.  
+- **POST /v1/feedback** â€” Save user feedback (session_id, rating/thumbs_up, comment) for DB.  
+
+If you set `SPRING_BACKEND_URL` (e.g. `http://localhost:8080`), the API forwards these payloads to your Spring app (`POST {url}/api/v1/chat/log` and `POST {url}/api/v1/feedback`). Implement those endpoints in Spring to save to your database.
+
+## Optional: MySQL (skinme_db) for product recommendations
+
+You can **check with the live database** when chatting or searching products. Set these **environment variables** (never commit real credentials; use `.env` and keep it out of git):
+
+- `MYSQL_HOST` â€” e.g. your MySQL server host  
+- `MYSQL_PORT` â€” default `3306`  
+- `MYSQL_USER` â€” DB user  
+- `MYSQL_PASSWORD` â€” DB password  
+- `MYSQL_DATABASE` â€” e.g. `skinme_db`  
+- `MYSQL_PRODUCTS_TABLE` â€” optional; default `product`
+
+Copy `.env.example` to `.env`, fill in the MySQL section, and load it (e.g. `python-dotenv` or export in shell). Then:
+
+- **Chat:** Send `POST /v1/chat` with `"use_database": true` in the body to get product suggestions from MySQL.
+- **Product search:** `GET /v1/products?concern=dry&use_database=true` to search the database.
+- **Streamlit:** Use the sidebar checkbox â€œCheck with database (skinme_db)â€.
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/v1/chat -H "Content-Type: application/json" -d "{\"message\": \"What is niacinamide?\"}"
+```
+
+## Sync product data (SkinMe API â†’ CSV, images, cleanup)
+
+Fetches from `https://backend.skinme.store/api/v1/products/all`, writes `data/skinme_products.csv`, downloads images to `data/product_images/`, and **deletes image files for products no longer in the API**.
+
+```bash
+python main.py sync
+# Options:
+python main.py sync --no-download    # only update CSV, skip image download
+python main.py sync --no-cleanup     # do not delete unused image files
+# Or run script directly:
+python -m scripts.sync_products [--no-download] [--no-cleanup] [--no-sync]
+```
+
+Run sync periodically to auto-update when new products are added and to clean up removed products.
+
+## Scraping (BeautifulSoup)
+
+For **JSON APIs** (e.g. SkinMe) the sync uses `requests`; no bs4 needed. For **HTML pages**, use the optional scraper:
+
+```python
+from skin_assistant.infrastructure.scraper import fetch_html, parse_html, scrape_table_to_rows, save_scraped_to_csv
+rows = scrape_table_to_rows("https://example.com/products")
+save_scraped_to_csv(rows, Path("data/scraped.csv"))
+```
+
+Install: `pip install beautifulsoup4` (included in requirements).
+
+## Train the intent model (scikit-learn)
+
+Uses a small built-in dataset; you can add a CSV with columns `text` and `intent` for better accuracy.
+
+```bash
+python main.py train
+# Or with custom data/output:
+python -m scripts.train --data data/intent_training.csv --output models/artifacts
+```
+
+Intents: `greeting`, `ingredient_info`, `products_with_ingredient`, `product_recommendation`, `general_ingredient_search`, `other`.  
+Model is saved to `models/artifacts/intent_model.joblib` and used by **GET /v1/intent**.
+
+## Train product models (text + image)
+
+Uses **synced data** (`data/skinme_products.csv` and optionally `data/product_images/`). Run `python main.py sync` first.
+
+- **Text model:** predicts `productType` (or `category_name`) from product name + description (sklearn).
+- **Image model:** predicts `productType` from product image (PyTorch/torchvision; optional).
+
+```bash
+python main.py train-products              # text model only
+python main.py train-products --image       # text + image model (requires torch, torchvision)
+python main.py train-products --image --epochs 10 --batch-size 8
+# Or:
+python -m scripts.train_products [--image] [--label productType|category_name]
+```
+
+Artifacts: `models/artifacts/product_type_model.joblib`, `models/artifacts/product_image_model.pt`.  
+For image training: `pip install torch torchvision`.
+
+## Product recommendations from SkinMe
+
+The chatbot and **GET /v1/products?concern=...** use the **SkinMe** product database first (`data/skinme_products.csv`). Run `python main.py sync` to fetch the latest products. For â€œrecommend products for dry skinâ€ or â€œI have acneâ€, results come from SkinMe; â€œproducts containing [ingredient]â€ still uses `data/skincare_products_clean.csv` when ingredient lists are available.
+
+## Train skin condition classifier (ingredients + skin disease images)
+
+Train a model from your **ingredients** data (already used by intent training) and **skin disease/condition images** so you can recommend SkinMe products by predicted condition.
+
+**Data options:**
+
+1. **Folder structure:** put images in `data/skin_disease_images/<condition>/` (e.g. `acne/`, `dryness/`), one image per file.
+2. **CSV:** create `data/skin_disease_labels.csv` with columns `image_name`, `condition` and place image files in `data/skin_disease_images/`. See `data/skin_disease_labels.csv.example`.
+
+```bash
+python main.py train-skin-condition
+# Or with custom paths:
+python -m scripts.train_skin_condition --images data/skin_disease_images --csv data/skin_disease_labels.csv --epochs 10
+```
+
+Model is saved to `models/artifacts/skin_condition_model.pt`. Use it to predict condition from a user image and then recommend products from the SkinMe database by mapping condition â†’ concern (e.g. acne â†’ â€œacneâ€ concern search).
+
+## Optional: Streamlit chat UI
+
+```bash
+pip install streamlit
+streamlit run app.py
+```
+
+(Run from project root with `pip install -e .` so the `skin_assistant` package is available.)
+
+## Optional: LLM replies (Gemini)
+
+Set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) so **POST /v1/chat** uses Google Gemini with your ingredients/products as context:
+
+```bash
+set GEMINI_API_KEY=your-key-from-google-ai-studio
+python main.py
+```
+
+Optional: `GEMINI_MODEL` (default `gemini-2.0-flash`).

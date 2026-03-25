@@ -44,7 +44,7 @@ Check that the chatbot API is up.
 |-------|------|----------|-------------|
 | message | string | Yes | User message (1–2000 chars) |
 | history | array | No | Previous messages `[{ "role": "user" \| "assistant", "content": "..." }]` (optional; DB history used when session_id is set) |
-| use_llm | boolean | No | Use OpenAI for replies (default: true) |
+| use_llm | boolean | No | Use Gemini for replies when API key is set (default: true) |
 | use_database | boolean | No | Use DB for product recommendations (default: false) |
 | session_id | string | No | Chat session ID (e.g. UUID). If set, turn is saved to DB and history is loaded from DB. |
 | user_id | string | No | Logged-in user ID from your auth. Stored in DB. |

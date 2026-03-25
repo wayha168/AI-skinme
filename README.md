@@ -1,4 +1,4 @@
-﻿# Skin Assistant
+# Skin Assistant
 
 AI skincare assistant: REST API, product data sync from [SkinMe API](https://backend.skinme.store/api/v1/products/all), CSV export, optional scraping (bs4), and ML training (intent + product text + image).
 
@@ -166,11 +166,13 @@ streamlit run app.py
 
 (Run from project root with `pip install -e .` so the `skin_assistant` package is available.)
 
-## Optional: LLM replies
+## Optional: LLM replies (Gemini)
 
-Set `OPENAI_API_KEY` so **POST /v1/chat** uses GPT with your ingredients/products as context:
+Set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) so **POST /v1/chat** uses Google Gemini with your ingredients/products as context:
 
 ```bash
-set OPENAI_API_KEY=sk-...
+set GEMINI_API_KEY=your-key-from-google-ai-studio
 python main.py
-```   s k i n m e - r e c o m m e n d a t i o n 
+```
+
+Optional: `GEMINI_MODEL` (default `gemini-2.0-flash`).

@@ -12,7 +12,7 @@ Skin Assistant — entry point.
 
   On serve, product data is synced from backend (backend.skinme.store); if CSV/images already exist they are left as-is.
   Console chat uses the same ChatService as the API (ingredients, product recommendations, optional LLM/DB).
-  Optional MySQL (skinme_db) is used at runtime when "Check with database" is enabled (set MYSQL_* in .env).
+  Optional MySQL (skinme_db): chat logs when MYSQL_* is set; use --use-database to merge DB products with scraped skinme_products.csv.
 """
 import argparse
 import sys
@@ -160,15 +160,15 @@ def run_chat_console(
     # Interactive console
     print_section("Chat console", "-")
     print_info("Same AI as API. Type your message and press Enter. Commands: quit, exit, or Ctrl+C to stop.")
-    if use_database and chat_repo.is_available():
-        print_info("Using database for product recommendations.")
+    if use_database:
+        print_info("Product recommendations merge MySQL skinme_db with scraped skinme_products.csv when MYSQL_* is set.")
     if chat_repo.is_available():
         print_success("Chat is saved to database (skinme_db).")
     else:
         print_warning(
             "Chat is NOT saved to database. To save chats: set MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE in .env"
         )
-    print_info("Use LLM (GPT): " + ("yes" if use_llm else "no (retrieval only)"))
+    print_info("Use LLM (Gemini): " + ("yes" if use_llm else "no (retrieval only)"))
     print_line()
 
     while True:
@@ -225,8 +225,13 @@ def main() -> int:
     parser.add_argument("--no-download", action="store_true", help="sync: skip image download")
     parser.add_argument("--no-cleanup", action="store_true", help="sync: skip deleting unused images")
     parser.add_argument("--overwrite", action="store_true", help="sync: overwrite existing CSV; default is to leave existing data")
-    parser.add_argument("--no-llm", action="store_true", dest="chat_no_llm", help="chat: use retrieval only (no OpenAI)")
-    parser.add_argument("--use-database", action="store_true", dest="chat_use_db", help="chat: use DB for product recommendations")
+    parser.add_argument("--no-llm", action="store_true", dest="chat_no_llm", help="chat: use retrieval only (no Gemini)")
+    parser.add_argument(
+        "--use-database",
+        action="store_true",
+        dest="chat_use_db",
+        help="chat: merge MySQL product table with scraped skinme_products.csv",
+    )
     parser.add_argument("--image", action="store_true", help="train-products: also train image model")
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=8)

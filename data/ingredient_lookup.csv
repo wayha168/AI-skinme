@@ -1,0 +1,81 @@
+ingredient_name,clean_name,primary_function,safety_level,typical_skin_types,related_concerns,pregnancy_note,source_type
+Aqua,aqua,solvent,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Glycerin,glycerin,humectant,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Butylene Glycol,butylene_glycol,humectant,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Propanediol,propanediol,humectant,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Caprylic/Capric Triglyceride,caprylic_capric_triglyceride,emollient,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Squalane,squalane,emollient,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Ceramide NP,ceramide_np,barrier repair,safe,"dry, sensitive","barrier, dryness, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Ceramide AP,ceramide_ap,barrier repair,safe,"dry, sensitive","barrier, dryness",Generally acceptable,common INCI / synthetic mapping
+Ceramide EOP,ceramide_eop,barrier repair,safe,"dry, sensitive","barrier, dryness",Generally acceptable,common INCI / synthetic mapping
+Cholesterol,cholesterol,barrier support,safe,all,"barrier, dryness",Generally acceptable,common INCI / synthetic mapping
+Phytosphingosine,phytosphingosine,barrier support,safe,all,"barrier, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Hyaluronic Acid,hyaluronic_acid,humectant,safe,"combination, dry, normal",dehydration,Generally acceptable,common INCI / synthetic mapping
+Sodium Hyaluronate,sodium_hyaluronate,humectant,safe,"combination, dry, normal",dehydration,Generally acceptable,common INCI / synthetic mapping
+Panthenol,panthenol,soothing,safe,"dry, sensitive","dryness, redness, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Allantoin,allantoin,soothing,safe,sensitive,"redness, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Niacinamide,niacinamide,brightening / barrier,safe,"combination, normal, oily","barrier, dullness, oil control, pores",Generally acceptable,common INCI / synthetic mapping
+Vitamin E,vitamin_e,antioxidant,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Tocopherol,tocopherol,antioxidant,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Green Tea Extract,green_tea_extract,antioxidant,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Centella Asiatica Extract,centella_asiatica_extract,soothing,safe,"combination, sensitive","redness, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Madecassoside,madecassoside,soothing,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Beta-Glucan,beta_glucan,soothing,safe,all,"dehydration, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Colloidal Oatmeal,colloidal_oatmeal,soothing,safe,all,"itchiness, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Aloe Vera Leaf Juice,aloe_vera_leaf_juice,soothing,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Urea,urea,hydrating / keratolytic,moderate,all,,Generally acceptable,common INCI / synthetic mapping
+Lactic Acid,lactic_acid,AHA exfoliant,moderate,"dry, normal","dehydration, dullness, texture",Generally acceptable,common INCI / synthetic mapping
+Glycolic Acid,glycolic_acid,AHA exfoliant,moderate,"combination, normal, oily","dullness, post-acne marks, texture",Generally acceptable,common INCI / synthetic mapping
+Mandelic Acid,mandelic_acid,AHA exfoliant,moderate,"combination, oily, sensitive","acne, post-acne marks, texture",Generally acceptable,common INCI / synthetic mapping
+Salicylic Acid,salicylic_acid,BHA exfoliant,moderate,"acne-prone, combination, oily","acne, blackheads, clogged pores",Generally acceptable,common INCI / synthetic mapping
+PHA,pha,gentle exfoliant,moderate,"dry, normal, sensitive","sensitivity, texture",Generally acceptable,common INCI / synthetic mapping
+Azelaic Acid,azelaic_acid,anti-acne / brightening,moderate,"acne-prone, combination, sensitive","acne, post-acne marks, redness",Generally acceptable,common INCI / synthetic mapping
+Tranexamic Acid,tranexamic_acid,brightening,safe,all,"hyperpigmentation, melasma, post-acne marks",Generally acceptable,common INCI / synthetic mapping
+Alpha Arbutin,alpha_arbutin,brightening,safe,all,"dullness, hyperpigmentation",Generally acceptable,common INCI / synthetic mapping
+Ascorbic Acid,ascorbic_acid,vitamin C antioxidant,moderate,all,"dullness, hyperpigmentation, photodamage",Generally acceptable,common INCI / synthetic mapping
+Sodium Ascorbyl Phosphate,sodium_ascorbyl_phosphate,vitamin C derivative,safe,all,"acne, dullness",Generally acceptable,common INCI / synthetic mapping
+3-O-Ethyl Ascorbic Acid,3_o_ethyl_ascorbic_acid,vitamin C derivative,safe,all,"dullness, hyperpigmentation",Generally acceptable,common INCI / synthetic mapping
+Retinol,retinol,retinoid,caution,"combination, normal, oily","acne, fine lines, texture",Avoid during pregnancy,common INCI / synthetic mapping
+Retinal,retinal,retinoid,caution,"combination, normal, oily","acne, fine lines, texture",Avoid during pregnancy,common INCI / synthetic mapping
+Bakuchiol,bakuchiol,retinol alternative,safe,"combination, dry, normal","fine lines, texture",Generally acceptable,common INCI / synthetic mapping
+Peptide Complex,peptide_complex,firming,safe,all,"fine lines, firmness",Generally acceptable,common INCI / synthetic mapping
+Copper Peptide,copper_peptide,firming,moderate,all,"fine lines, firmness",Generally acceptable,common INCI / synthetic mapping
+Caffeine,caffeine,de-puffing,safe,all,puffiness,Generally acceptable,common INCI / synthetic mapping
+Zinc PCA,zinc_pca,oil control,safe,"acne-prone, oily","acne, oiliness",Generally acceptable,common INCI / synthetic mapping
+Tea Tree Leaf Oil,tea_tree_leaf_oil,anti-acne,moderate,all,acne,Generally acceptable,common INCI / synthetic mapping
+Sulfur,sulfur,anti-acne,moderate,"acne-prone, oily",acne,Generally acceptable,common INCI / synthetic mapping
+Benzoyl Peroxide,benzoyl_peroxide,anti-acne,caution,"acne-prone, oily",acne,Check with dermatologist,common INCI / synthetic mapping
+Kaolin,kaolin,absorbent,safe,all,oiliness,Generally acceptable,common INCI / synthetic mapping
+Bentonite,bentonite,absorbent,safe,all,oiliness,Generally acceptable,common INCI / synthetic mapping
+Rice Extract,rice_extract,brightening,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Licorice Root Extract,licorice_root_extract,brightening,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Snail Secretion Filtrate,snail_secretion_filtrate,repair,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Galactomyces Ferment Filtrate,galactomyces_ferment_filtrate,ferment / glow,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Bifida Ferment Lysate,bifida_ferment_lysate,repair,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Saccharomyces Ferment,saccharomyces_ferment,repair,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Dimethicone,dimethicone,occlusive / slip,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Shea Butter,shea_butter,emollient,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Jojoba Seed Oil,jojoba_seed_oil,emollient,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Sunflower Seed Oil,sunflower_seed_oil,emollient,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Mineral Oil,mineral_oil,occlusive,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Petrolatum,petrolatum,occlusive,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Cetearyl Alcohol,cetearyl_alcohol,fatty alcohol,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Cetyl Alcohol,cetyl_alcohol,fatty alcohol,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Polyglyceryl-10 Laurate,polyglyceryl_10_laurate,emulsifier,safe,all,,Generally acceptable,common INCI / synthetic mapping
+PEG-100 Stearate,peg_100_stearate,emulsifier,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Phenoxyethanol,phenoxyethanol,preservative,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Ethylhexylglycerin,ethylhexylglycerin,preservative booster,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Disodium EDTA,disodium_edta,chelating agent,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Carbomer,carbomer,thickener,safe,all,,Generally acceptable,common INCI / synthetic mapping
+Triethanolamine,triethanolamine,pH adjuster,moderate,all,,Generally acceptable,common INCI / synthetic mapping
+Fragrance,fragrance,fragrance,caution,all,,Generally acceptable,common INCI / synthetic mapping
+Lavender Oil,lavender_oil,fragrance,caution,all,,Generally acceptable,common INCI / synthetic mapping
+Limonene,limonene,fragrance allergen,caution,all,,Generally acceptable,common INCI / synthetic mapping
+Denatured Alcohol,denatured_alcohol,solvent,moderate,all,,Generally acceptable,common INCI / synthetic mapping
+Alcohol,alcohol,solvent,moderate,all,,Generally acceptable,common INCI / synthetic mapping
+Zinc Oxide,zinc_oxide,mineral UV filter,safe,all,"UV protection, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Titanium Dioxide,titanium_dioxide,mineral UV filter,safe,all,"UV protection, sensitivity",Generally acceptable,common INCI / synthetic mapping
+Avobenzone,avobenzone,chemical UV filter,moderate,all,,Generally acceptable,common INCI / synthetic mapping
+Octocrylene,octocrylene,chemical UV filter,moderate,all,,Generally acceptable,common INCI / synthetic mapping
+Uvinul A Plus,uvinul_a_plus,chemical UV filter,moderate,all,,Generally acceptable,common INCI / synthetic mapping
+Uvinul T 150,uvinul_t_150,chemical UV filter,moderate,all,,Generally acceptable,common INCI / synthetic mapping

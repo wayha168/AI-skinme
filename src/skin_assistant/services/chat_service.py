@@ -7,6 +7,14 @@ from typing import Any, Optional
 from skin_assistant.infrastructure import KnowledgeRepository
 
 
+def _normalize_assistant_plain_text(text: str) -> str:
+    """Remove markdown bold so replies read like natural voice (plain text, Gemini-style)."""
+    if not text:
+        return text
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    return text.replace("**", "").strip()
+
+
 def _gemini_api_key() -> Optional[str]:
     """Google AI API key for Gemini (GEMINI_API_KEY or GOOGLE_API_KEY)."""
     return (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "").strip() or None
@@ -67,51 +75,51 @@ def _is_recommendation_request(text: str) -> bool:
 CONCERN_FOLLOWUPS = {
     "acne": (
         "I'd like to recommend the right things for you. Can you tell me a bit more?\n\n"
-        "• **What type of acne** do you have — blackheads, whiteheads, cystic, or hormonal breakouts?\n"
-        "• **How severe** is it — mild, moderate, or more persistent?\n"
-        "• **What's your skin type** — oily, combination, or sensitive?\n\n"
+        "• What type of acne do you have — blackheads, whiteheads, cystic, or hormonal breakouts?\n"
+        "• How severe is it — mild, moderate, or more persistent?\n"
+        "• What's your skin type — oily, combination, or sensitive?\n\n"
         "Once I know this, I can suggest ingredients and products that fit your situation."
     ),
     "dry": (
         "To help you better, it would help to know:\n\n"
-        "• Is your skin **mostly dry** (tight or flaky), or also **sensitive or reactive**?\n"
-        "• **Which areas** are most affected — face, body, or both?\n"
-        "• Do you have any **other concerns** (e.g. redness, dullness)?\n\n"
+        "• Is your skin mostly dry (tight or flaky), or also sensitive or reactive?\n"
+        "• Which areas are most affected — face, body, or both?\n"
+        "• Do you have any other concerns (e.g. redness, dullness)?\n\n"
         "Then I can suggest ingredients and products that suit you."
     ),
     "oil": (
         "Quick questions so I can tailor my suggestions:\n\n"
-        "• Is the oiliness **all over** or mainly in the **T-zone** (forehead, nose)?\n"
-        "• Do you also have **breakouts** or **enlarged pores**?\n"
-        "• Is your skin **sensitive** or quite tolerant to products?\n\n"
+        "• Is the oiliness all over or mainly in the T-zone (forehead, nose)?\n"
+        "• Do you also have breakouts or enlarged pores?\n"
+        "• Is your skin sensitive or quite tolerant to products?\n\n"
         "With that, I can recommend the right products for you."
     ),
     "sensitive": (
         "I'd like to suggest things that won't irritate you. Can you share:\n\n"
-        "• **What tends to trigger** your skin — certain products, weather, or stress?\n"
-        "• Do you get **redness**, **itching**, or both?\n"
-        "• Any **other concerns** (dryness, breakouts) alongside sensitivity?\n\n"
+        "• What tends to trigger your skin — certain products, weather, or stress?\n"
+        "• Do you get redness, itching, or both?\n"
+        "• Any other concerns (dryness, breakouts) alongside sensitivity?\n\n"
         "Then I can point you to gentle ingredients and products."
     ),
     "redness": (
         "To give you useful advice:\n\n"
-        "• Is the redness **ongoing** or does it **flare up** sometimes?\n"
-        "• Do you have **sensitive** or **reactive** skin, or rosacea?\n"
-        "• **Which areas** are affected — cheeks, nose, or all over?\n\n"
+        "• Is the redness ongoing or does it flare up sometimes?\n"
+        "• Do you have sensitive or reactive skin, or rosacea?\n"
+        "• Which areas are affected — cheeks, nose, or all over?\n\n"
         "I can then suggest calming ingredients and products."
     ),
     "aging": (
         "To recommend the right products:\n\n"
-        "• What bothers you most — **fine lines**, **deeper wrinkles**, **dullness**, or **loss of firmness**?\n"
-        "• Do you have **sensitive** skin or use **retinoids** already?\n"
-        "• Any **other concerns** (dryness, pigmentation)?\n\n"
+        "• What bothers you most — fine lines, deeper wrinkles, dullness, or loss of firmness?\n"
+        "• Do you have sensitive skin or use retinoids already?\n"
+        "• Any other concerns (dryness, pigmentation)?\n\n"
         "Then I can suggest ingredients and products that fit your goals."
     ),
     "wrinkle": (
         "To recommend the right products:\n\n"
-        "• What bothers you most — **fine lines**, **deeper wrinkles**, **dullness**, or **loss of firmness**?\n"
-        "• Do you have **sensitive** skin or use **retinoids** already?\n"
-        "• Any **other concerns** (dryness, pigmentation)?\n\n"
+        "• What bothers you most — fine lines, deeper wrinkles, dullness, or loss of firmness?\n"
+        "• Do you have sensitive skin or use retinoids already?\n"
+        "• Any other concerns (dryness, pigmentation)?\n\n"
         "Then I can suggest ingredients and products that fit your goals."
     ),
 }
@@ -183,9 +191,9 @@ def _get_concern_followup(user_message: str, conversation_history: Optional[list
             return CONCERN_FOLLOWUPS.get("aging") or CONCERN_FOLLOWUPS.get("wrinkle", CONCERN_FOLLOWUPS["acne"])
         return (
             "I'd like to help. Can you tell me a bit more?\n\n"
-            "• **What exactly** is bothering you — breakouts, dryness, redness, or something else?\n"
-            "• **Where** — face, body, or both?\n"
-            "• **What's your skin type** if you know it — oily, dry, combination, or sensitive?\n\n"
+            "• What exactly is bothering you — breakouts, dryness, redness, or something else?\n"
+            "• Where — face, body, or both?\n"
+            "• What's your skin type if you know it — oily, dry, combination, or sensitive?\n\n"
             "Then I can suggest ingredients and products that fit."
         )
     return None
@@ -220,7 +228,7 @@ def _format_ingredient(ing: dict) -> str:
     what_do = _stringify_ingredient_field(ing.get("what_does_it_do", ""))
     good_for = _stringify_ingredient_field(ing.get("who_is_it_good_for", ""))
     avoid = _stringify_ingredient_field(ing.get("who_should_avoid", ""))
-    parts = [f"**{name}**"]
+    parts = [name]
     if what:
         parts.append(f"What it is: {str(what)[:400]}{'...' if len(str(what)) > 400 else ''}")
     if what_do:
@@ -237,13 +245,13 @@ def _format_product(prod: dict) -> str:
     ptype = prod.get("product_type", "")
     price = prod.get("price", "")
     url = prod.get("product_url", "")
-    line = f"• **{name}**"
+    line = f"• {name}"
     if ptype:
         line += f" ({ptype})"
     if price:
         line += f" — {price}"
     if url:
-        line += f" — [Link]({url})"
+        line += f" — {url}"
     return line
 
 
@@ -271,6 +279,36 @@ def _message_has_concern(text: str) -> bool:
         return False
     t = text.strip().lower()
     return any(c in t for c in CONCERN_WORDS)
+
+
+def _explicit_ingredient_question(text: str) -> bool:
+    """True when the user is asking about a named ingredient or ingredient-led products—not only describing how skin feels."""
+    t = (text or "").strip().lower()
+    if not t:
+        return False
+    prefixes = (
+        "what is ",
+        "what are ",
+        "tell me about ",
+        "explain ",
+        "define ",
+        "products with ",
+        "products containing ",
+        "product with ",
+        "containing ",
+        "ingredient ",
+        "what does ",
+    )
+    if any(t.startswith(p) for p in prefixes):
+        return True
+    if "what is " in t or "tell me about " in t or "explain " in t:
+        return True
+    return False
+
+
+def _concern_first_message(text: str) -> bool:
+    """User is focused on a skin/face problem, not an ingredient encyclopedia question."""
+    return _message_has_concern(text) and not _explicit_ingredient_question(text)
 
 
 def _message_has_specific_concern(text: str) -> bool:
@@ -469,15 +507,36 @@ class ChatService:
                 else:
                     prod_hits = prod_hits[:5]
                 parts = []
-                if ing_hits and max_price is None:
-                    parts.append("**Ingredients that may help:**\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3]))
+                cf = _concern_first_message(prev_concern)
                 if prod_hits:
                     if max_price is not None:
-                        parts.append(f"Here are products **within your ${max_price:.0f} budget**:\n" + "\n".join(_format_product(p) for p in prod_hits))
+                        head = f"Here are a few options within your ${max_price:.0f} budget:\n"
+                    elif cf:
+                        head = "Thanks for sticking with me. Here are a few products that might suit what you described:\n"
                     else:
-                        parts.append("**Product suggestions:**\n" + "\n".join(_format_product(p) for p in prod_hits))
+                        head = "Here are a few products that might fit:\n"
+                    if not cf and ing_hits and max_price is None:
+                        parts.append(
+                            "A few ingredients people often look for for this kind of concern:\n\n"
+                            + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3])
+                        )
+                    parts.append(head + "\n".join(_format_product(p) for p in prod_hits))
+                elif ing_hits and not cf and max_price is None:
+                    parts.append("A few ingredients people often look for for this kind of concern:\n\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3]))
+                elif ing_hits and cf and not prod_hits and max_price is None:
+                    names = [h.get("name") for h in ing_hits[:3] if h.get("name")]
+                    if names:
+                        return (
+                            "That sounds really uncomfortable. I'm not a medical professional, but people often look into "
+                            f"ingredients like {', '.join(names)} for concerns like yours. "
+                            "If it doesn't settle, a dermatologist can help you figure out what's going on."
+                        )
                 if parts:
-                    return "Based on what you told me, here are some suggestions:\n\n" + "\n\n".join(parts)
+                    if cf and prod_hits:
+                        intro = "That sounds rough—skin can be really sensitive to change.\n\n"
+                    else:
+                        intro = ""
+                    return intro + "\n\n".join(parts)
                 return (
                     "I’d like to suggest the right products. Can you tell me a bit more? "
                     "For example: Is your skin mostly dry or sensitive? Which area is most affected — face or body?"
@@ -497,7 +556,7 @@ class ChatService:
                     if prods:
                         ing = self._repo.get_ingredient_by_name(name)
                         out = (_format_ingredient(ing) + "\n\n") if ing else ""
-                        out += "**Products containing it:**\n" + "\n".join(_format_product(p) for p in prods)
+                        out += "Products containing it:\n" + "\n".join(_format_product(p) for p in prods)
                         return out
                     ing = self._repo.get_ingredient_by_name(name)
                     if ing:
@@ -505,7 +564,7 @@ class ChatService:
                             ing.get("name", name), 6, use_database=use_database
                         )
                         if prods:
-                            return _format_ingredient(ing) + "\n\n**Products:**\n" + "\n".join(_format_product(p) for p in prods)
+                            return _format_ingredient(ing) + "\n\nProducts:\n" + "\n".join(_format_product(p) for p in prods)
                 break
 
         # What is [ingredient]
@@ -520,7 +579,7 @@ class ChatService:
                             ing.get("name", name), 3, use_database=use_database
                         )
                         if prods:
-                            out += "\n\n**Products containing it:**\n" + "\n".join(_format_product(p) for p in prods)
+                            out += "\n\nProducts containing it:\n" + "\n".join(_format_product(p) for p in prods)
                         return out
                     hits = self._repo.search_ingredients(name, 3)
                     if hits:
@@ -534,7 +593,7 @@ class ChatService:
 
         # Products for concern — ingredients from all datasets; SkinMe products matched to those ingredients + concern
         concern_type = _detect_concern_type(user_message)
-        has_product_intent = concern_type or any(
+        has_product_intent = concern_type or _message_has_concern(user_message) or any(
             w in msg
             for w in (
                 "product",
@@ -565,7 +624,7 @@ class ChatService:
                 within_budget = _filter_products_by_price(prod_hits, max_price)
                 if within_budget:
                     prod_hits = within_budget[:8]
-                    budget_header = f"Here are products **within your ${max_price:.0f} budget**:\n"
+                    budget_header = f"Here are products within your ${max_price:.0f} budget:\n"
                 else:
                     def _price_val(p):
                         try:
@@ -573,42 +632,77 @@ class ChatService:
                         except (ValueError, TypeError):
                             return 999
                     prod_hits = sorted(prod_hits, key=_price_val)[:5]
-                    budget_header = f"We don't have products under ${max_price:.0f}. Here are the **closest in price**:\n"
+                    budget_header = f"We don't have products under ${max_price:.0f}. Here are the closest in price:\n"
                 if not prod_hits:
                     return (
-                        f"No products matched your skin concern within ${max_price:.0f}. "
-                        "Try a slightly higher budget or rephrase your concern (e.g. acne, dry skin, oily skin)."
+                        f"I couldn't find anything in our catalog under ${max_price:.0f} for that kind of concern. "
+                        "You could try a slightly higher budget, or tell me a bit more about your skin—for example if it's dry, oily, or sensitive."
                     )
-                return budget_header + "\n".join(_format_product(p) for p in prod_hits)
+                cf_b = _concern_first_message(user_message)
+                lead = "I hear you—staying in budget matters.\n\n" if cf_b else ""
+                return lead + budget_header + "\n".join(_format_product(p) for p in prod_hits)
             prod_hits = prod_hits[:5]
+            cf = _concern_first_message(user_message)
             parts = []
             if prod_hits:
-                if ing_hits:
-                    parts.append("**Ingredients that may help:**\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3]))
-                parts.append("**Product suggestions:**\n" + "\n".join(_format_product(p) for p in prod_hits))
+                if ing_hits and not cf:
+                    parts.append(
+                        "A few ingredients people often look for for this kind of concern:\n\n"
+                        + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3])
+                    )
+                header = (
+                    "Here are a few products that might fit what you're describing:\n"
+                    if cf
+                    else "Some products that might fit:\n"
+                )
+                parts.append(header + "\n".join(_format_product(p) for p in prod_hits))
+            elif ing_hits and not cf:
+                parts.append(
+                    "A few ingredients people often look for for this kind of concern:\n\n"
+                    + "\n\n".join(_format_ingredient(h) for h in ing_hits[:3])
+                )
+            elif ing_hits and cf and not prod_hits:
+                names = [h.get("name") for h in ing_hits[:3] if h.get("name")]
+                if names:
+                    return (
+                        "Thanks for trusting me with that—skin can be really stressful when it acts up. "
+                        "I'm not a medical professional, but ingredients like "
+                        f"{', '.join(names)} often come up when people talk about this. "
+                        "If it keeps bothering you or gets worse, a dermatologist is the right person to check it properly."
+                    )
             if parts:
-                return "\n\n".join(parts)
+                intro = "I hear you—that can be frustrating.\n\n" if cf and prod_hits else ""
+                return intro + "\n\n".join(parts)
 
         # Greeting — check before ingredient search so "Hi" doesn't match random ingredients
         if any(w in msg for w in ("hi", "hello", "hey")) and len(msg) < 20:
             return (
                 "Hi! I'm your Skin Assistant. You can ask me:\n"
-                "• **What is [ingredient]?** — e.g. \"What is niacinamide?\"\n"
-                "• **Recommend products for [concern]** — e.g. \"Products for dry skin\" or \"I have acne\"\n"
-                "• **Products with [ingredient]** — I'll suggest products that contain it.\n"
+                "• What is [ingredient]? — e.g. \"What is niacinamide?\"\n"
+                "• Recommend products for [concern] — e.g. \"Products for dry skin\" or \"I have acne\"\n"
+                "• Products with [ingredient] — I'll suggest products that contain it.\n"
                 "Ask me anything about ingredients or product recommendations."
             )
 
-        # General ingredient search (only if message looks like a real query, not a greeting or affirmation)
+        # General ingredient search — skip dry "matches" when the user is really talking about skin/face
         ing_hits = self._repo.search_ingredients(user_message, 5)
         if ing_hits:
-            return "**Matching ingredients:**\n\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits)
+            if _concern_first_message(user_message):
+                names = [h.get("name") for h in ing_hits[:3] if h.get("name")]
+                if names:
+                    return (
+                        "It sounds like your skin has been giving you a hard time. "
+                        "I'm not a doctor, but people sometimes read about ingredients "
+                        f"like {', '.join(names)} when they're dealing with something like that. "
+                        "If you tell me a bit more—or if you want product ideas—I'm happy to help."
+                    )
+            return "Here's what I found on that:\n\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits)
 
         return (
             "I'm not sure how to answer that. Try asking:\n"
-            "• **What is niacinamide?**\n"
-            "• **Recommend products for dry skin**\n"
-            "• **Products with hyaluronic acid**"
+            "• What is niacinamide?\n"
+            "• Recommend products for dry skin\n"
+            "• Products with hyaluronic acid"
         )
 
     def reply_with_llm(
@@ -635,13 +729,14 @@ class ChatService:
             search_query, ing_hits, product_type=concern_type, top_k=24, use_database=use_db
         )
         prod_hits = _filter_products_for_user_problem(prod_hits, search_query)
+        concern_first = _concern_first_message(user_message)
         max_price_llm = _parse_budget(user_message)
         budget_note = ""
         if max_price_llm is not None and prod_hits:
             within = _filter_products_by_price(prod_hits, max_price_llm)
             if within:
                 prod_hits = within[:8]
-                budget_note = f"User asked for products within ${max_price_llm:.0f}."
+                budget_note = f"Budget: prefer products around ${max_price_llm:.0f} or less."
             else:
                 def _pv_llm(p: dict) -> float:
                     try:
@@ -651,45 +746,54 @@ class ChatService:
                 priced = [p for p in prod_hits if p.get("price") not in (None, "")]
                 prod_hits = sorted(priced, key=_pv_llm)[:5] if priced else prod_hits[:5]
                 budget_note = (
-                    f"User budget ${max_price_llm:.0f}: no items in range for this concern; "
-                    f"closest-priced options for the same concern are listed below."
+                    f"Budget: nothing in that range; below are the closest alternatives by price."
                 )
         else:
             prod_hits = prod_hits[:8]
         context_parts = []
         if ing_hits:
-            context_parts.append(
-                "Relevant ingredients (from knowledge base):\n"
-                + "\n".join(
-                    f"- {h.get('name')}: {_stringify_ingredient_field(h.get('what_is_it', ''))[:200]} | "
-                    f"Benefits: {_stringify_ingredient_field(h.get('what_does_it_do', ''))[:200]} | "
-                    f"Good for: {_stringify_ingredient_field(h.get('who_is_it_good_for', ''))[:150]}"
-                    for h in ing_hits
+            skip_ingredient_dump = concern_first and bool(prod_hits)
+            if skip_ingredient_dump:
+                pass
+            elif concern_first and not prod_hits:
+                names = [h.get("name") for h in ing_hits[:4] if h.get("name")]
+                if names:
+                    context_parts.append(
+                        "Ingredient names that sometimes come up for this kind of concern (for one short sentence in your reply, not a list): "
+                        + ", ".join(names)
+                    )
+            else:
+                context_parts.append(
+                    "Ingredient notes (for reference):\n"
+                    + "\n".join(
+                        f"- {h.get('name')}: {_stringify_ingredient_field(h.get('what_is_it', ''))[:200]} | "
+                        f"Benefits: {_stringify_ingredient_field(h.get('what_does_it_do', ''))[:200]} | "
+                        f"Good for: {_stringify_ingredient_field(h.get('who_is_it_good_for', ''))[:150]}"
+                        for h in ing_hits
+                    )
                 )
-            )
         if prod_hits:
             prod_lines = "\n".join(
                 f"- {p.get('product_name')} ({p.get('product_type')}) {p.get('price', '')}" for p in prod_hits
             )
             if budget_note:
                 prod_lines = budget_note + "\n" + prod_lines
-            prod_src = (
-                "scraped skinme_products.csv + MySQL (skinme_db)"
-                if use_db
-                else "scraped skinme_products.csv"
-            )
-            context_parts.append(f"Relevant products (from {prod_src}):\n" + prod_lines)
+            context_parts.append("Products you may mention (names and prices must match this list exactly):\n" + prod_lines)
         context = "\n\n".join(context_parts) if context_parts else "No specific ingredients or products found."
 
-        system = """You are a friendly Skin Care Assistant. Use the provided context to give accurate, concise answers.
+        system = """You are a warm, knowledgeable skincare advisor. Every reply should sound like a real person talking: natural sentences, empathy when someone describes a skin worry, and clear practical advice—not a form letter or a bullet list unless it really helps.
 
-The context is loaded from CSV files under the project data/ folder. **Ingredient explanations** may come from ingredientsList.csv, ingredient_lookup.csv, Paula lists, and other ingredient data. **Product names and prices** must come only from the product list in the context (scraped skinme_products.csv, and MySQL skinme_db when enabled). They are chosen to align with those ingredient matches plus the user’s concern. Do not invent products, prices, or ingredient facts that are not supported by this context. If something is missing from the context, say so briefly instead of guessing.
+Facts about ingredients and products come only from the supplied context. Product names and prices must match the product list exactly when you mention them. Do not invent products, prices, or ingredient facts. If something is missing from the context, say so briefly instead of guessing.
 
-Continue the conversation naturally: refer to what the user said earlier in the thread when answering follow-up questions, budget changes, or new details. Keep the same skin concern unless they clearly switch topics.
+If the user is describing a skin or face problem (how they feel, what it looks like, or that something bothers them), answer like a caring person: acknowledge how they feel, give practical guidance in plain language, and avoid sounding like a database. Do not say "matching ingredients", "search results", "retrieved", "aligned", "score", "calculation", "knowledge base", "CSV", or explain how you found the information. Do not present long ingredient lists unless they explicitly asked what an ingredient is or asked for ingredient details.
 
-When they ask for products within a budget, only mention products from the context that fit their stated skin problem (do not suggest unrelated categories).
+When they only describe a problem and product names are in the context, you may suggest 1–3 products by name and price in a natural way—not as a catalog dump.
 
-When the user mentions a skin problem but does NOT ask for products and context is thin, you may ask brief follow-up questions. When they ask for help, recommendations, or what to use, use ingredients and products from the context; mention 1–3 products by name and price when listed. Do not invent product names or ingredient facts not supported by the context."""
+Style: Plain, natural prose (similar to Gemini). No markdown bold (asterisks), no # headings, unless the user asks for formatted lists. Short paragraphs or simple line breaks are fine.
+
+Continue the conversation naturally. When they ask for products within a budget, only use products from the context that fit their stated skin problem (do not suggest unrelated categories).
+
+When the user mentions a skin problem but does NOT ask for products and context is thin, you may ask brief, human follow-up questions."""
         history_lines: list[str] = []
         for m in conversation_history[-6:]:
             role = m.get("role")
@@ -704,8 +808,9 @@ When the user mentions a skin problem but does NOT ask for products and context 
         if history_lines:
             blocks.append("Recent conversation:\n\n" + "\n\n".join(history_lines))
         blocks.append(
-            f"Active skin concern / search focus (carry through the thread): {search_query}\n\n"
-            f"Context:\n{context}\n\nUser message:\n{user_message}"
+            f"What the user is talking about (carry through the thread if relevant):\n{search_query}\n\n"
+            f"Reference information (do not quote source labels to the user):\n{context}\n\n"
+            f"User message:\n{user_message}"
         )
         user_block = "\n\n---\n\n".join(blocks)
 
@@ -717,13 +822,13 @@ When the user mentions a skin problem but does NOT ask for products and context 
                 contents=user_block,
                 config=genai_types.GenerateContentConfig(
                     system_instruction=system,
-                    max_output_tokens=500,
-                    temperature=0.5,
+                    max_output_tokens=640,
+                    temperature=0.7 if concern_first else 0.55,
                 ),
             )
             text = (getattr(resp, "text", None) or "").strip()
             if text:
-                return text
+                return _normalize_assistant_plain_text(text)
         except Exception:
             pass
         return self.reply_with_retrieval(
@@ -737,13 +842,16 @@ When the user mentions a skin problem but does NOT ask for products and context 
         use_llm: bool = True,
         use_database: bool = False,
     ) -> str:
-        # When user mentions a skin problem vaguely, ask what type (like a real person) first
-        followup = _get_concern_followup(user_message, conversation_history)
-        if followup:
-            return followup
+        """
+        Prefer Gemini for the final reply when enabled (natural, person-like prose with retrieval context).
+        Fall back to canned follow-ups + retrieval only when LLM is off or no API key.
+        """
         history = conversation_history or []
         if use_llm and _llm_enabled():
             return self.reply_with_llm(user_message, history, use_database=use_database)
+        followup = _get_concern_followup(user_message, history)
+        if followup:
+            return followup
         return self.reply_with_retrieval(
             user_message, use_database=use_database, conversation_history=history
         )

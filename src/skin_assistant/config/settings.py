@@ -16,6 +16,19 @@ def get_settings():
     mysql_database = os.environ.get("MYSQL_DATABASE", "").strip()
     mysql_products_table = os.environ.get("MYSQL_PRODUCTS_TABLE", "product").strip() or "product"
     use_mysql_db = bool(mysql_host and mysql_user and mysql_database)
+    # Product JSON API (same data as storefront; default is proxied on skinme.store)
+    skinme_api_url = (
+        os.environ.get("SKINME_API_URL", "").strip()
+        or "https://skinme.store/api/v1/products/all"
+    )
+    # Backend origin (API may return absolute URLs pointing here; we rewrite image URLs to the storefront)
+    skinme_base_url = os.environ.get("SKINME_BACKEND_URL", "").strip() or "https://backend.skinme.store"
+    # Public site where /uploads/... assets are served (shareable image links)
+    skinme_frontend_base_url = (
+        os.environ.get("SKINME_FRONTEND_URL", "").strip()
+        or os.environ.get("FRONTEND_URL", "").strip()
+        or "https://skinme.store"
+    ).rstrip("/")
     return type("Settings", (), {
         "project_root": root,
         "data_dir": root / "data",
@@ -24,9 +37,10 @@ def get_settings():
         "products_path": root / "data" / "skincare_products_clean.csv",
         "dataset_products_path": root / "data" / "products_ingredients_dataset.csv",
         "models_dir": root / "models" / "artifacts",
-        # SkinMe API & scraped product data
-        "skinme_api_url": "https://backend.skinme.store/api/v1/products/all",
-        "skinme_base_url": "https://backend.skinme.store",
+        # SkinMe API & product CSV (image URLs use skinme_frontend_base_url for /uploads/...)
+        "skinme_api_url": skinme_api_url,
+        "skinme_base_url": skinme_base_url.rstrip("/"),
+        "skinme_frontend_base_url": skinme_frontend_base_url,
         "skinme_products_path": root / "data" / "skinme_products.csv",
         "product_images_dir": root / "data" / "product_images",
         # Skin disease / condition images for training (folder or CSV with image_name, condition)

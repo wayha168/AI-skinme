@@ -6,6 +6,7 @@ from typing import Any, Optional
 import pandas as pd
 
 from skin_assistant.config import get_settings
+from skin_assistant.infrastructure.skinme_client import rewrite_skinme_product_image_urls
 
 
 def _normalize_product_name(name: str) -> str:
@@ -260,6 +261,7 @@ class KnowledgeRepository:
                 self._skinme_df = pd.DataFrame()
             else:
                 df = pd.read_csv(path)
+                df = rewrite_skinme_product_image_urls(df)
                 parts = [
                     df.get("name", pd.Series("")).fillna(""),
                     df.get("description", pd.Series("")).fillna(""),

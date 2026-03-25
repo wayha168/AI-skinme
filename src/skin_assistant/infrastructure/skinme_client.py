@@ -1,6 +1,6 @@
 """
 Fetch product data from SkinMe API (JSON). Saves to CSV.
-For HTML scraping use bs4 in a separate scraper; this client uses requests for the REST API.
+Image links use the public storefront host (e.g. https://skinme.store/uploads/...) so they match the frontend.
 """
 from pathlib import Path
 from typing import Optional
@@ -11,15 +11,38 @@ import requests
 from skin_assistant.config import get_settings
 
 
-SKINME_PRODUCTS_ALL = "https://backend.skinme.store/api/v1/products/all"
-SKINME_BASE = "https://backend.skinme.store"
+def public_image_url(url: Optional[str]) -> str:
+    """
+    Normalize product image URLs to the public storefront (e.g. skinme.store/uploads/...).
+    Rewrites absolute backend.skinme.store URLs to the configured frontend base.
+    """
+    if url is None:
+        return ""
+    s = str(url).strip()
+    if not s:
+        return ""
+    settings = get_settings()
+    front = settings.skinme_frontend_base_url.rstrip("/")
+    backend = settings.skinme_base_url.rstrip("/")
+    if s.startswith(backend + "/") or s == backend:
+        return front + s[len(backend) :]
+    if s.startswith("/"):
+        return front + s
+    return s
 
 
 def _full_image_url(img: dict) -> str:
     download_url = (img or {}).get("downloadUrl") or ""
     if not download_url:
         return ""
-    return (SKINME_BASE + download_url) if download_url.startswith("/") else download_url
+    settings = get_settings()
+    front = settings.skinme_frontend_base_url.rstrip("/")
+    backend = settings.skinme_base_url.rstrip("/")
+    if download_url.startswith("/"):
+        return front + download_url
+    if download_url.startswith(backend + "/") or download_url == backend:
+        return front + download_url[len(backend) :]
+    return public_image_url(download_url)
 
 
 def _deduped_image_urls(images: list) -> list[str]:
@@ -49,6 +72,25 @@ def primary_image_url_from_row(image_url: object, all_image_urls: object) -> str
         if p:
             return p
     return ""
+
+
+def rewrite_skinme_product_image_urls(df: pd.DataFrame) -> pd.DataFrame:
+    """Rewrite image_url / all_image_urls in a SkinMe products DataFrame to storefront URLs."""
+    if df.empty:
+        return df
+    out = df.copy()
+    if "image_url" in out.columns:
+        out["image_url"] = out["image_url"].apply(
+            lambda x: public_image_url(str(x) if pd.notna(x) else "") or ""
+        )
+    if "all_image_urls" in out.columns:
+        def _pipe(s: object) -> object:
+            if pd.isna(s) or not str(s).strip():
+                return s
+            parts = [public_image_url(p.strip()) for p in str(s).split("|") if p.strip()]
+            return "|".join(parts)
+        out["all_image_urls"] = out["all_image_urls"].apply(_pipe)
+    return out
 
 
 def all_image_urls_for_row(image_url: object, all_image_urls: object) -> list[str]:

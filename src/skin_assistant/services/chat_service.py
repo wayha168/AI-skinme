@@ -15,6 +15,51 @@ def _normalize_assistant_plain_text(text: str) -> str:
     return text.replace("**", "").strip()
 
 
+# Khmer script (Unicode Khmer + Khmer Symbols) — for language detection
+_KHMER_SCRIPT_RE = re.compile(r"[\u1780-\u17FF\u19E0-\u19FF]")
+
+
+def _message_uses_khmer(text: str) -> bool:
+    """True if the message contains Khmer script (ភាសាខ្មែរ)."""
+    if not text or not text.strip():
+        return False
+    return bool(_KHMER_SCRIPT_RE.search(text))
+
+
+def _asks_reply_in_khmer(text: str) -> bool:
+    """True when the user asks for a Khmer reply in English (no Khmer script yet)."""
+    if not text:
+        return False
+    low = text.lower()
+    if "ភាសាខ្មែរ" in text:
+        return True
+    return any(
+        p in low
+        for p in (
+            "in khmer",
+            "speak khmer",
+            "reply in khmer",
+            "answer in khmer",
+            "respond in khmer",
+        )
+    )
+
+
+def _prefer_khmer_reply(user_message: str, conversation_history: Optional[list[dict]] = None) -> bool:
+    """
+    Prefer Khmer for the assistant reply when the user uses Khmer, asks for Khmer,
+    or recently wrote in Khmer (so short follow-ups like \"ok\" can stay in thread language).
+    """
+    if _message_uses_khmer(user_message):
+        return True
+    if _asks_reply_in_khmer(user_message):
+        return True
+    for m in (conversation_history or [])[-8:]:
+        if m.get("role") == "user" and _message_uses_khmer((m.get("content") or "")):
+            return True
+    return False
+
+
 def _gemini_api_key() -> Optional[str]:
     """Google AI API key for Gemini (GEMINI_API_KEY or GOOGLE_API_KEY)."""
     return (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "").strip() or None
@@ -467,6 +512,28 @@ def _filter_products_for_user_problem(products: list[dict], search_query: str) -
     return out if out else products
 
 
+# Gemini: role-play as the store receptionist so replies match the online storefront experience.
+_LLM_SYSTEM_INSTRUCTION = """You are the professional virtual receptionist for SkinMe, our online skincare store (skinme.store). Sound like a great front-desk person: polished and courteous, genuinely warm, easy to talk to—never stiff or robotic.
+
+Tone: friendly professionalism. You may sprinkle in very light humor now and then—think a quick smile in conversation (a gentle joke about shopping online, routines, or how confusing ingredient names can be). Never use humor about someone's skin, appearance, health, or sensitive concerns. Stay kind and respectful when they describe problems.
+
+Always answer what the customer actually asked. If they ask a question, respond to it directly first; then add helpful context (ingredients, product ideas, or a gentle follow-up) when it fits.
+
+You know skincare and our catalog. Facts about ingredients and products come only from the supplied context. Product names and prices must match the product list exactly when you mention them. Do not invent products, prices, or ingredient facts. If something is missing from the context, say so briefly instead of guessing.
+
+If the user describes a skin or face concern, acknowledge how they feel, give practical guidance in plain language, and avoid sounding like a database. Do not say "matching ingredients", "search results", "retrieved", "aligned", "score", "calculation", "knowledge base", "CSV", or explain how you found the information. Do not present long ingredient lists unless they explicitly asked what an ingredient is or asked for ingredient details.
+
+When they describe a problem and product names are in the context, you may suggest 1–3 products by name and price in a natural way—not as a catalog dump.
+
+Style: Plain, natural prose. No markdown bold (asterisks), no # headings, unless the user asks for formatted lists. Short paragraphs or simple line breaks are fine.
+
+Continue the conversation naturally. When they ask for products within a budget, only use products from the context that fit their stated skin problem (do not suggest unrelated categories).
+
+When the user mentions a skin problem but does NOT ask for products and context is thin, you may ask brief, human follow-up questions.
+
+Language: Reply in English or in Khmer (ភាសាខ្មែរ), matching the customer. If they write in Khmer, reply entirely in Khmer. If they write in English, reply in English. If they switch language, follow them. If they ask you to respond in Khmer (in words or in Khmer), use Khmer. A separate instruction block may tell you which language to use for this turn—follow it. Keep ingredient and product names from the reference as printed when they are Latin; translate your own explanations and advice into the customer language."""
+
+
 class ChatService:
     """Produces assistant replies from user message and optional history."""
 
@@ -675,13 +742,25 @@ class ChatService:
                 return intro + "\n\n".join(parts)
 
         # Greeting — check before ingredient search so "Hi" doesn't match random ingredients
-        if any(w in msg for w in ("hi", "hello", "hey")) and len(msg) < 20:
+        _khmer_greet = any(p in (user_message or "") for p in ("សួស្តី", "ជំរាបសួរ")) and len((user_message or "").strip()) < 40
+        if (any(w in msg for w in ("hi", "hello", "hey")) and len(msg) < 20) or _khmer_greet:
+            if _prefer_khmer_reply(user_message, history):
+                return (
+                    "សួស្តី និងសូមស្វាគមន៍មកកាន់ SkinMe! ខ្ញុំនៅទីនេះដើម្បីជួយអ្នករកផលិតផលថែរស្សីដែលសមនឹងតម្រូវការ។\n\n"
+                    "សូមសួរអ្វីក៏បាន ឧទាហរណ៍៖\n"
+                    "• [គ្រឿងផ្សំ] ជាអ្វី? (ឧ. «niacinamide ជាអ្វី?»)\n"
+                    "• តើអ្នកណែនាំអ្វីសម្រាប់ [បញ្ហាស្បែក]? (ឧ. ស្បែកស្ងួត ឬមុខឡើងពងរមួល)\n"
+                    "• តើមានផលិតផលដែលមាន [គ្រឿងផ្សំ] ទេ?\n\n"
+                    "សូមប្រាប់ខ្ញុំពីអ្វីដែលអ្នកត្រូវការ ខ្ញុំនឹងជួយអ្នកឱ្យបានល្អបំផុត។"
+                )
             return (
-                "Hi! I'm your Skin Assistant. You can ask me:\n"
-                "• What is [ingredient]? — e.g. \"What is niacinamide?\"\n"
-                "• Recommend products for [concern] — e.g. \"Products for dry skin\" or \"I have acne\"\n"
-                "• Products with [ingredient] — I'll suggest products that contain it.\n"
-                "Ask me anything about ingredients or product recommendations."
+                "Hello, and welcome to SkinMe! I’m on reception today—can’t hand you a coffee through the screen, "
+                "but I can absolutely help you find the right skincare.\n\n"
+                "Ask me anything, for example:\n"
+                "• What is [ingredient]? (e.g. \"What is niacinamide?\")\n"
+                "• What would you recommend for [concern]? (e.g. dry skin or acne)\n"
+                "• Do you have products with [ingredient]?\n\n"
+                "Tell me what you need and I’ll do my best."
             )
 
         # General ingredient search — skip dry "matches" when the user is really talking about skin/face
@@ -698,11 +777,18 @@ class ChatService:
                     )
             return "Here's what I found on that:\n\n" + "\n\n".join(_format_ingredient(h) for h in ing_hits)
 
+        if _prefer_khmer_reply(user_message, history):
+            return (
+                "អូ… ខ្ញុំមិនយល់ច្បាស់ទេ។ សូមនិយាយម្តងទៀតបានទេ? ឧទាហរណ៍៖\n"
+                "• niacinamide ជាអ្វី?\n"
+                "• តើណែនាំអ្វីសម្រាប់ស្បែកស្ងួត?\n"
+                "• តើមានផលិតផលដែលមាន hyaluronic acid ទេ?"
+            )
         return (
-            "I'm not sure how to answer that. Try asking:\n"
+            "Hmm—I didn’t quite catch that (happens to the best of us). Could you say it another way? For example:\n"
             "• What is niacinamide?\n"
-            "• Recommend products for dry skin\n"
-            "• Products with hyaluronic acid"
+            "• What do you recommend for dry skin?\n"
+            "• Do you have products with hyaluronic acid?"
         )
 
     def reply_with_llm(
@@ -781,19 +867,7 @@ class ChatService:
             context_parts.append("Products you may mention (names and prices must match this list exactly):\n" + prod_lines)
         context = "\n\n".join(context_parts) if context_parts else "No specific ingredients or products found."
 
-        system = """You are a warm, knowledgeable skincare advisor. Every reply should sound like a real person talking: natural sentences, empathy when someone describes a skin worry, and clear practical advice—not a form letter or a bullet list unless it really helps.
-
-Facts about ingredients and products come only from the supplied context. Product names and prices must match the product list exactly when you mention them. Do not invent products, prices, or ingredient facts. If something is missing from the context, say so briefly instead of guessing.
-
-If the user is describing a skin or face problem (how they feel, what it looks like, or that something bothers them), answer like a caring person: acknowledge how they feel, give practical guidance in plain language, and avoid sounding like a database. Do not say "matching ingredients", "search results", "retrieved", "aligned", "score", "calculation", "knowledge base", "CSV", or explain how you found the information. Do not present long ingredient lists unless they explicitly asked what an ingredient is or asked for ingredient details.
-
-When they only describe a problem and product names are in the context, you may suggest 1–3 products by name and price in a natural way—not as a catalog dump.
-
-Style: Plain, natural prose (similar to Gemini). No markdown bold (asterisks), no # headings, unless the user asks for formatted lists. Short paragraphs or simple line breaks are fine.
-
-Continue the conversation naturally. When they ask for products within a budget, only use products from the context that fit their stated skin problem (do not suggest unrelated categories).
-
-When the user mentions a skin problem but does NOT ask for products and context is thin, you may ask brief, human follow-up questions."""
+        system = _LLM_SYSTEM_INSTRUCTION
         history_lines: list[str] = []
         for m in conversation_history[-6:]:
             role = m.get("role")
@@ -801,9 +875,9 @@ When the user mentions a skin problem but does NOT ask for products and context 
             if not c:
                 continue
             if role == "user":
-                history_lines.append(f"User: {c}")
+                history_lines.append(f"Customer: {c}")
             elif role == "assistant":
-                history_lines.append(f"Assistant: {c}")
+                history_lines.append(f"You (receptionist): {c}")
         blocks: list[str] = []
         if history_lines:
             blocks.append("Recent conversation:\n\n" + "\n\n".join(history_lines))
@@ -812,6 +886,14 @@ When the user mentions a skin problem but does NOT ask for products and context 
             f"Reference information (do not quote source labels to the user):\n{context}\n\n"
             f"User message:\n{user_message}"
         )
+        if _prefer_khmer_reply(user_message, conversation_history):
+            blocks.append(
+                "Language for this reply: Khmer (ភាសាខ្មែរ). Write the entire reply in natural, polite Khmer "
+                "suited to a professional store receptionist. Keep ingredient and product names from the reference as "
+                "printed when they are Latin; translate explanations, advice, and any paraphrased prices into Khmer."
+            )
+        else:
+            blocks.append("Language for this reply: English.")
         user_block = "\n\n---\n\n".join(blocks)
 
         model_name = (os.environ.get("GEMINI_MODEL") or "gemini-2.0-flash").strip()

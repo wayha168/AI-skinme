@@ -67,8 +67,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Title and short intro
-st.title("✨ Skin Assistant")
-st.caption("Ask about ingredients, skin concerns, or product recommendations. You can also upload a selfie for skin analysis.")
+st.title("✨ SkinMe — store receptionist")
+st.caption(
+    "Professional, friendly help at the counter—ingredients, skin concerns, or products. "
+    "Replies in English or Khmer (ភាសាខ្មែរ) when you use the LLM. You can also upload a selfie for skin analysis."
+)
 
 # Initialize chat history and image state
 if "messages" not in st.session_state:
